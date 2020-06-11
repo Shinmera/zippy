@@ -13,6 +13,7 @@
   :homepage "https://github.com/Shinmera/zippy"
   :serial T
   :components ((:file "package")
+               (:file "structures")
                (:file "zippy")
                (:file "documentation"))
   :depends-on (:documentation-utils
