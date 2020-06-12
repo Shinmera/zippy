@@ -15,7 +15,10 @@
         ;; FIXME: a header may be here.
         (read-data-descriptor stream)))))
 
-(defgeneric decompress-vector (vector index format))
-(defgeneric decompress-stream (stream format))
+(defgeneric decompress-vector (vector index length format))
+(defgeneric decompress-stream (stream length format))
 (defgeneric compress-vector (vector out-stream format))
 (defgeneric compress-stream (in-stream out-stream format))
+
+(defmethod decompress-vector (vector index length (format (eql :deflate)))
+  (3bz:decompress-vector vector :format :deflate :start index :end (+ index length)))
