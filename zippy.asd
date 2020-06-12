@@ -13,10 +13,13 @@
   :homepage "https://github.com/Shinmera/zippy"
   :serial T
   :components ((:file "package")
+               (:file "parser")
+               (:file "tables")
                (:file "structures")
                (:file "zippy")
                (:file "documentation"))
   :depends-on (:documentation-utils
+               :alexandria
                :nibbles
                :babel
                :3bz))

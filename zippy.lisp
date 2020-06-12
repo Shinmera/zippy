@@ -6,4 +6,16 @@
 
 (in-package #:org.shirakumo.zippy)
 
-(defun )
+(defun handle-file-header (record)
+  (let* ((version (local-file-header-version record))
+         (file-attribute-compatibility (gethash (ldb (byte 8 8) version) *file-attribute-compatibility-map*)))
+    (multiple-value-bind (major minor) (floor version 10)
+      
+      (when (logbitp 2 (local-file-header-flags record))
+        ;; FIXME: a header may be here.
+        (read-data-descriptor stream)))))
+
+(defgeneric decompress-vector (vector index format))
+(defgeneric decompress-stream (stream format))
+(defgeneric compress-vector (vector out-stream format))
+(defgeneric compress-stream (in-stream out-stream format))
