@@ -15,6 +15,8 @@
   :components ((:file "package")
                (:file "parser")
                (:file "tables")
+               (:file "compression")
+               (:file "encryption")
                (:file "structures")
                (:file "zippy")
                (:file "documentation"))

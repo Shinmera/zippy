@@ -81,10 +81,7 @@
            `(let ((,name (make-array ,count :element-type ',(binary-type-type type))))
               (loop for i from 0 below (length ,name)
                     do (setf (aref ,name i) (,(binary-type-decoder type) ,vector ,index))
-                       (incf ,index ,(binary-type-size type)))
-              ,@(when (eql type 'character)
-                  ;; FIXME: Not quite right -- only when GPB 11 is set.
-                  `((setf ,name (babel:octets-to-string ,name :encoding :utf-8))))))
+                       (incf ,index ,(binary-type-size type)))))
           (T
            `(let ((,name (,(binary-type-decoder type) ,vector ,index)))
               (incf ,index ,(binary-type-size type)))))))
@@ -99,10 +96,7 @@
           (count
            `(let ((,name (make-array ,count :element-type ',(binary-type-type type))))
               (loop for i from 0 below (length ,name)
-                    do (setf (aref ,name i) (,(binary-type-reader type) ,stream)))
-              ,@(when (eql type 'character)
-                  ;; FIXME: Not quite right -- only when GPB 11 is set.
-                  `((setf ,name (babel:octets-to-string ,name :encoding :utf-8))))))
+                    do (setf (aref ,name i) (,(binary-type-reader type) ,stream)))))
           (T
            `(let ((,name (,(binary-type-reader type) ,stream))))))))
 

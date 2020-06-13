@@ -15,10 +15,18 @@
         ;; FIXME: a header may be here.
         (read-data-descriptor stream)))))
 
-(defgeneric decompress-vector (vector index length format))
-(defgeneric decompress-stream (stream length format))
-(defgeneric compress-vector (vector out-stream format))
-(defgeneric compress-stream (in-stream out-stream format))
+(defclass zip-file ()
+  ())
 
-(defmethod decompress-vector (vector index length (format (eql :deflate)))
-  (3bz:decompress-vector vector :format :deflate :start index :end (+ index length)))
+(defclass zip-entry ()
+  (attribute-compatibility
+   version
+   encryption-method
+   compression-method
+   last-modified
+   crc-32
+   start
+   size
+   uncompressed-size
+   file-name
+   extra-fields))
