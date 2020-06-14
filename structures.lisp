@@ -6,7 +6,7 @@
 
 (in-package #:org.shirakumo.zippy)
 
-(define-byte-structure (local-file-header #x04034B50)
+(define-byte-structure (local-file #x04034B50)
   (version ub16)
   (flags ub16)
   (compression-method ub16)
@@ -17,8 +17,7 @@
   (uncompressed-size ub32)
   (file-name-length ub16)
   (extra-field-length ub16)
-  (file-name character file-name-length)
-  (extra ub8 extra-field-length))
+  (file-name character file-name-length))
 
 (define-byte-structure (data-descriptor #x08074B50)
   (crc-32 ub32)
@@ -72,8 +71,8 @@
   (data-sector character (- size 44)))
 
 (define-byte-structure (end-of-central-directory-locator/64 #x07064B50)
-  (number-of-disk ub32)
-  (relative-offset ub64)
+  (central-directory-disk ub32)
+  (central-directory-start ub64)
   (number-of-disks ub32))
 
 (define-byte-structure (end-of-central-directory #x06054B50)
