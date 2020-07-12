@@ -1,7 +1,7 @@
 #|
- This file is a part of zippy
- (c) 2020 Shirakumo http://tymoon.eu (shinmera@tymoon.eu)
- Author: Nicolas Hafner <shinmera@tymoon.eu>
+This file is a part of zippy
+(c) 2020 Shirakumo http://tymoon.eu (shinmera@tymoon.eu)
+Author: Nicolas Hafner <shinmera@tymoon.eu>
 |#
 
 (in-package #:org.shirakumo.zippy)
@@ -17,7 +17,8 @@
   (uncompressed-size ub32)
   (file-name-length ub16)
   (extra-field-length ub16)
-  (file-name character file-name-length))
+  (file-name character file-name-length)
+  (extra ub8 extra-field-length))
 
 (define-byte-structure (data-descriptor #x08074B50)
   (crc-32 ub32)
@@ -66,8 +67,8 @@
   (central-directory-disk ub32)
   (disk-entries ub64)
   (central-directory-entries ub64)
+  (central-directory-size ub64)
   (central-directory-start ub64)
-  (starting-disk ub64)
   (data-sector character (- size 44)))
 
 (define-byte-structure (end-of-central-directory-locator/64 #x07064B50)
@@ -94,24 +95,24 @@
   (starting-disk ub32))
 
 (define-byte-structure (os/2 #x00009)
-    (size ub16)
+  (size ub16)
   (uncompressed-size ub32)
   (compression-type ub16)
   (crc ub32)
   (data ub8 (- size 10)))
 
 (define-byte-structure (ntfs #x000A)
-    (size ub16)
+  (size ub16)
   (reserved ub32)
   (data ub8 (- size 4)))
 
 (define-byte-structure (openvms #x000C)
-    (size ub16)
+  (size ub16)
   (crc ub32)
   (data ub8 (- size 4)))
 
 (define-byte-structure (unix #x000D)
-    (size ub16)
+  (size ub16)
   (atime ub32)
   (mtime ub32)
   (uid ub16)
@@ -119,7 +120,7 @@
   (data ub8 (- size 12)))
 
 (define-byte-structure (patch-descriptor #x000F)
-    (size ub16)
+  (size ub16)
   (version ub16)
   (flags ub32)
   (old-size ub32)
@@ -132,15 +133,15 @@
   (data ub8 size))
 
 (define-byte-structure (x509-file #x0015)
-    (size ub16)
+  (size ub16)
   (data ub8 size))
 
 (define-byte-structure (x509-central-directory #x0016)
-    (size ub16)
+  (size ub16)
   (data ub8 size))
 
 (define-byte-structure (encryption-header #x0017)
-    (size ub16)
+  (size ub16)
   (format ub16)
   (encryption-algorithm ub16)
   (bit-length ub16)
@@ -148,29 +149,29 @@
   (certificate-size ub8 (- size 8)))
 
 (define-byte-structure (record-management-controls #x0018)
-    (size ub16)
+  (size ub16)
   (data ub8 size))
 
 (define-byte-structure (pkcs7-encryption-recipient-certificate-list #x0019)
-    (size ub16)
+  (size ub16)
   (version ub16)
   (store ub8 (- size 2)))
 
 (define-byte-structure (mvs #x0065)
-    (size ub16)
+  (size ub16)
   (id ub32)
   (data ub8 (- size 4)))
 
 (define-byte-structure (policy-decryption-key-record #x0021)
-    (size ub16)
+  (size ub16)
   (data ub8 size))
 
 (define-byte-structure (key-provider-record #x0022)
-    (size ub16)
+  (size ub16)
   (data ub8 size))
 
 (define-byte-structure (policy-key-data-record #x0023)
-    (size ub16)
+  (size ub16)
   (data ub8 size))
 
 
@@ -179,7 +180,7 @@
 ;;;       but does not note their internal structure. We just omit
 ;;;       them here.
 (define-byte-structure (zipit-macintosh-long #x2605)
-    (size ub16)
+  (size ub16)
   (signature #x5A504954)
   (length ub8)
   (file-name ub8 length)
@@ -187,37 +188,37 @@
   (creator ub8 4))
 
 (define-byte-structure (zipit-macintosh-short-file #x2705)
-    (size ub16)
+  (size ub16)
   (signature #x5A504954)
   (file-type ub8 4)
   (creator ub8 4)
   (flags ub16))
 
 (define-byte-structure (zipit-macintosh-short-dir #x2805)
-    (size ub16)
+  (size ub16)
   (signature #x5A504954)
   (flags ub16)
   (view ub16))
 
 (define-byte-structure (infozip-unicode-comment #x6375)
-    (size ub16)
+  (size ub16)
   (version ub8)
   (crc-32 ub32)
-  (comment (- size 6)))
+  (comment ub8 (- size 6)))
 
 (define-byte-structure (infozip-unicode-path #x7075)
-    (size ub16)
+  (size ub16)
   (version ub8)
   (crc-32 ub32)
   (name ub8 (- size 6)))
 
 (define-byte-structure (data-stream-alignment #xa11e)
-    (size ub16)
+  (size ub16)
   (alignment ub16)
   (padding ub8 (- size 2)))
 
 (define-byte-structure (microsoft-open-packaging-growth-hint #xa220)
-    (size ub16)
+  (size ub16)
   (signature ub16)
   (padding-value ub16)
   (padding ub8 (- size 4)))

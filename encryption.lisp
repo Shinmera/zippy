@@ -8,21 +8,21 @@
 
 (defstruct (pkware-decrypt-state
             (:constructor %make-pkware-decrypt-state ()))
-  (k0 305419896 :type '(unsigned-byte 32))
-  (k1 591751049 :type '(unsigned-byte 32))
-  (k2 878082192 :type '(unsigned-byte 32)))
+  (k0 305419896 :type (unsigned-byte 32))
+  (k1 591751049 :type (unsigned-byte 32))
+  (k2 878082192 :type (unsigned-byte 32)))
 
-(defun crc-32 (crc byte)
+(defun crc32-rotate (crc byte)
   (logxor (ldb (byte 24 8) crc)
           (aref 3bz::+crc32/table+ (ldb (byte 8 0) (logxor crc byte)))
           #xFFFFFFFF))
 
 (defun update-pkware-state (state byte)
-  (setf (pkware-decrypt-state-k0 state) (crc-32 (pkware-decrypt-state-k0 state) byte))
+  (setf (pkware-decrypt-state-k0 state) (crc32-rotate (pkware-decrypt-state-k0 state) byte))
   (setf (pkware-decrypt-state-k1 state) (+ (pkware-decrypt-state-k1 state)
                                            (logand (pkware-decrypt-state-k0 state) #xFF)))
   (setf (pkware-decrypt-state-k1 state) (1+ (* (pkware-decrypt-state-k1 state) 134775813)))
-  (setf (pkware-decrypt-state-k2 state) (crc-32 (pkware-decrypt-state-k2 state) (ash (pkware-decrypt-state-k1) -24))))
+  (setf (pkware-decrypt-state-k2 state) (crc32-rotate (pkware-decrypt-state-k2 state) (ash (pkware-decrypt-state-k1 state) -24))))
 
 (defun pkware-decrypt-byte (state)
   (let ((temp (logior 2 (pkware-decrypt-state-k2 state))))

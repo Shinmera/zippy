@@ -18,6 +18,7 @@
                (:file "compression")
                (:file "encryption")
                (:file "structures")
+               (:file "io")
                (:file "zippy")
                (:file "documentation"))
   :depends-on (:documentation-utils

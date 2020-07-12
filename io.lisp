@@ -15,7 +15,7 @@
     (vector-input
      (setf (vector-input-index input) target))
     (stream
-     (file-position stream target))))
+     (file-position input target))))
 
 (defun index (input)
   (etypecase input
@@ -24,17 +24,16 @@
     (stream
      (file-position input))))
 
-(defun size (input)
-  (etypecase input
-    (vector-input
-     (length (vector-input-vector input)))
-    (stream
-     (file-length input))))
+(defmethod size ((input vector-input))
+  (length (vector-input-vector input)))
+
+(defmethod size ((input stream))
+  (file-length input))
 
 (defun ub32 (input)
   (etypecase input
     (vector-input
-     (prog1 (nibbles:ub32/le (vector-input-vector input) (vector-input-index input))
+     (prog1 (nibbles:ub32ref/le (vector-input-vector input) (vector-input-index input))
        (incf (vector-input-index input) 4)))
     (stream
      (nibbles:read-ub32/le input))))
@@ -61,3 +60,16 @@
             value))
          (stream
           (,(intern (format NIL "~a-~a" 'read structure-type)) ,input))))))
+
+(defun call-with-io (function io &key (direction :input) (if-exists :error) (index 0))
+  (etypecase io
+    ((or pathname string)
+     (with-open-file (stream io :direction direction :if-exists if-exists :element-type '(unsigned-byte 8))
+       (funcall function stream)))
+    (stream
+     (funcall function io))
+    (vector
+     (funcall function (make-vector-input io index)))))
+
+(defmacro with-io ((io target &rest args) &body body)
+  `(call-with-io (lambda (,io) ,@body) ,target ,@args))

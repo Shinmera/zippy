@@ -179,3 +179,10 @@
       (setf (ldb (byte 6 5) time) m)
       (setf (ldb (byte 5 0) time) (floor s 2))
       (values date time))))
+
+(defun decode-string (octets flags)
+  (babel:octets-to-string octets :encoding (if (logbitp 11 flags) :utf-8 :cp437)))
+
+(defun decode-version (version)
+  (multiple-value-bind (major minor) (floor (ldb (byte 8 0) version) 10)
+    (list major minor)))
