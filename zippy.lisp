@@ -6,6 +6,11 @@
 
 (in-package #:org.shirakumo.zippy)
 
+(define-condition archive-file-required (error)
+  ((id :initarg :id :initform (error "ID required.")))
+  (:report (lambda (c s) (format s "Disk ~a is required to continue reading the Zip file."
+                                 (slot-value c 'id)))))
+
 (defclass zip-file ()
   (entries))
 
@@ -89,12 +94,16 @@
               (setf (start entry) (zip64-extended-information-header-offset field))
               (setf (disk entry) (zip64-extended-information-starting-disk field))))))
 
-(defun decode-eocd-entries (input entries)
-  (loop for i from 0 below (length entries)
-        for structure = (parse-structure* input)
-        for entry = (make-instance 'zip-entry)
-        do (cde-to-entry structure entry)
-           (setf (aref entries i) entry)))
+(defun decode-central-directory (input entries entry-offset)
+  (let ((i entry-offset))
+    (loop for structure = (parse-structure* input)
+          for entry = (make-instance 'zip-entry)
+          do (cde-to-entry structure entry)
+             (setf (aref entries i) entry)
+             (incf i)
+          while (and (has-more input)
+                     (< i (length entries))))
+    i))
 
 (defun decode (input)
   (let (entries)
@@ -118,7 +127,7 @@
         (let ((eocd-locator (parse-structure end-of-central-directory-locator/64 input)))
           (when (/= (end-of-central-directory-number-of-disk eocd)
                     (end-of-central-directory-locator/64-central-directory-disk eocd-locator))
-            (restart-case (error "FIXME: Supply disk ~a" (end-of-central-directory-locator/64-central-directory-disk eocd-locator))
+            (restart-case (error 'archive-file-required :id (end-of-central-directory-locator/64-central-directory-disk eocd-locator))
               (use-value (new-input)
                 (setf input new-input))))
           ;; Okey, header is on here, let's check it.
@@ -138,12 +147,16 @@ No Zip64 End of Central Directory record found, but End of Central
 Directory contains a start marker that indicates there should be
 one."))
             (T
-             (when (/= (end-of-central-directory-number-of-disk eocd)
-                       (end-of-central-directory-central-directory-disk eocd))
-               (restart-case (error "FIXME: Supply disk ~a" (end-of-central-directory-central-directory-disk eocd))
-                 (use-value (new-input)
-                   (setf input new-input))))
-             (setf entries (make-array (end-of-central-directory-central-directory-entries eocd)))
-             (seek input (end-of-central-directory-central-directory-start eocd))
-             (decode-eocd-entries input entries)))
+             (let ((i 0)
+                   (offset (end-of-central-directory-central-directory-start eocd)))
+               (setf entries (make-array (end-of-central-directory-central-directory-entries eocd)))
+               (loop for disk from (end-of-central-directory-central-directory-disk eocd)
+                     below (end-of-central-directory-number-of-disk eocd)
+                     do (restart-case (error 'archive-file-required :id disk)
+                          (use-value (new-input)
+                            (seek new-input offset)
+                            (setf offset 0)
+                            (setf i (decode-central-directory new-input entries i)))))
+               (seek input offset)
+               (decode-central-directory input entries i))))
       entries)))

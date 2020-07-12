@@ -17,6 +17,13 @@
     (stream
      (file-position input target))))
 
+(defun has-more (input)
+  (etypecase input
+    (vector-input
+     (< (vector-input-index input) (length (vector-input-vector input))))
+    (stream
+     (< (file-position input) (file-length input)))))
+
 (defun index (input)
   (etypecase input
     (vector-input
@@ -64,8 +71,14 @@
 (defun call-with-io (function io &key (direction :input) (if-exists :error) (index 0))
   (etypecase io
     ((or pathname string)
-     (with-open-file (stream io :direction direction :if-exists if-exists :element-type '(unsigned-byte 8))
-       (funcall function stream)))
+     (handler-bind ((archive-file-required
+                      (lambda (c)
+                        (let ((id (slot-value c 'id)))
+                          ;; FIXME: Leaking FDs
+                          (use-value (open (make-pathname :type (format NIL "z~2,'0d" (1+ id)) :defaults io)
+                                           :element-type '(unsigned-byte 8)))))))
+       (with-open-file (stream io :direction direction :if-exists if-exists :element-type '(unsigned-byte 8))
+         (funcall function stream))))
     (stream
      (funcall function io))
     (vector
