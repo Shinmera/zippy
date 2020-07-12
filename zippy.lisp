@@ -116,18 +116,19 @@
       (seek input (- (index input) 4 16 4))
       (when (= #x07064B50 (ub32 input))
         (let ((eocd-locator (parse-structure end-of-central-directory-locator/64 input)))
-          (cond ((= (end-of-central-directory-number-of-disk eocd)
+          (when (/= (end-of-central-directory-number-of-disk eocd)
                     (end-of-central-directory-locator/64-central-directory-disk eocd-locator))
-                 ;; Okey, header is on here, let's check it.
-                 (seek input (end-of-central-directory-locator/64-central-directory-start eocd-locator))
-                 (when (= #x06064B50 (ub32 input))
-                   ;; If we had not found the header we would fall back to standard EOCD parsing.
-                   (let ((eocd/64 (parse-structure end-of-central-directory/64 input)))
-                     (setf entries (make-array (end-of-central-directory/64-central-directory-entries eocd/64)))
-                     (seek input (end-of-central-directory/64-central-directory-start eocd/64))
-                     (decode-eocd-entries input entries))))
-                (T
-                 (error "FIXME: Check primary disk")))))
+            (restart-case (error "FIXME: Supply disk ~a" (end-of-central-directory-locator/64-central-directory-disk eocd-locator))
+              (use-value (new-input)
+                (setf input new-input))))
+          ;; Okey, header is on here, let's check it.
+          (seek input (end-of-central-directory-locator/64-central-directory-start eocd-locator))
+          (when (= #x06064B50 (ub32 input))
+            ;; If we had not found the header we would fall back to standard EOCD parsing.
+            (let ((eocd/64 (parse-structure end-of-central-directory/64 input)))
+              (setf entries (make-array (end-of-central-directory/64-central-directory-entries eocd/64)))
+              (seek input (end-of-central-directory/64-central-directory-start eocd/64))
+              (decode-eocd-entries input entries)))))
       (cond (entries
              #++"Zip64 EOCD already populated the entries, we're good.")
             ((= #xFFFFFFFF (end-of-central-directory-central-directory-start eocd))
@@ -136,10 +137,12 @@
 No Zip64 End of Central Directory record found, but End of Central
 Directory contains a start marker that indicates there should be
 one."))
-            ((/= (end-of-central-directory-number-of-disk eocd)
-                 (end-of-central-directory-central-directory-disk eocd))
-             (error "FIXME: Check primary disk"))
             (T
+             (when (/= (end-of-central-directory-number-of-disk eocd)
+                       (end-of-central-directory-central-directory-disk eocd))
+               (restart-case (error "FIXME: Supply disk ~a" (end-of-central-directory-central-directory-disk eocd))
+                 (use-value (new-input)
+                   (setf input new-input))))
              (setf entries (make-array (end-of-central-directory-central-directory-entries eocd)))
              (seek input (end-of-central-directory-central-directory-start eocd))
              (decode-eocd-entries input entries)))
