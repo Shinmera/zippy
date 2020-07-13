@@ -50,6 +50,14 @@
 (defun dbg (f &rest args)
   (format T "~& -> ~?~%" f args))
 
+(defun process-extra-field (entry field)
+  (typecase field
+    (zip64-extended-information
+     (setf (size entry) (zip64-extended-information-compressed-size field))
+     (setf (uncompressed-size entry) (zip64-extended-information-original-size field))
+     (setf (start entry) (zip64-extended-information-header-offset field))
+     (setf (disk entry) (zip64-extended-information-starting-disk field)))))
+
 (defun lf-to-entry (lf entry)
   (macrolet ((maybe-set (field value)
                `(unless (,field entry)
@@ -65,7 +73,9 @@
     (maybe-set encryption-method (logbitp 0 (local-file-flags lf)))
     (maybe-set file-name (decode-string (local-file-file-name lf) (local-file-flags lf)))
     (setf (extra-fields entry) (append (extra-fields entry) (decode-extra-fields (local-file-extra lf) 0
-                                                                                 (local-file-extra-field-length lf))))))
+                                                                                 (local-file-extra-field-length lf))))
+    (loop for field in (extra-fields entry)
+          do (process-extra-field entry field))))
 
 (defun cde-to-entry (cde entry)
   (setf (version entry) (decode-version (central-directory-entry-version-made cde)))
@@ -87,12 +97,7 @@
   (setf (extra-fields entry) (decode-extra-fields (central-directory-entry-extra cde) 0
                                                   (central-directory-entry-extra-field-length cde)))
   (loop for field in (extra-fields entry)
-        do (typecase field
-             (zip64-extended-information
-              (setf (size entry) (zip64-extended-information-compressed-size field))
-              (setf (uncompressed-size entry) (zip64-extended-information-original-size field))
-              (setf (start entry) (zip64-extended-information-header-offset field))
-              (setf (disk entry) (zip64-extended-information-starting-disk field))))))
+        do (process-extra-field entry field)))
 
 (defun decode-central-directory (input entries entry-offset)
   (let ((i entry-offset))
@@ -119,44 +124,45 @@
           ;; TODO: Check for trying to seek out of the beginning of the file.
           do (seek input (- (index input) 5)))
     ;; We should now be at the beginning (after the signature) of the end-of-central-directory.
-    (let ((eocd (parse-structure end-of-central-directory input)))
+    (let* ((eocd (parse-structure end-of-central-directory input))
+           (cd-offset (end-of-central-directory-central-directory-start eocd))
+           (cd-start-disk (end-of-central-directory-central-directory-disk eocd))
+           (cd-end-disk (end-of-central-directory-number-of-disk eocd)))
       ;; OK, next we look for end-of-central-directory-locator/64, which should be
       ;; input - 4 (eocd sig) - 16 (ecod64 payload) - 4 (eocd64 sig)
       (seek input (- (index input) 4 16 4))
       (when (= #x07064B50 (ub32 input))
-        (let ((eocd-locator (parse-structure end-of-central-directory-locator/64 input)))
+        (let ((eocd-locator (parse-structure end-of-central-directory-locator/64 input))
+              (eocd64-input input))
           (when (/= (end-of-central-directory-number-of-disk eocd)
                     (end-of-central-directory-locator/64-central-directory-disk eocd-locator))
             (restart-case (error 'archive-file-required :id (end-of-central-directory-locator/64-central-directory-disk eocd-locator))
               (use-value (new-input)
-                (setf input new-input))))
+                (setf eocd64-input new-input))))
           ;; Okey, header is on here, let's check it.
-          (seek input (end-of-central-directory-locator/64-central-directory-start eocd-locator))
+          (seek eocd64-input (end-of-central-directory-locator/64-central-directory-start eocd-locator))
           (when (= #x06064B50 (ub32 input))
             ;; If we had not found the header we would fall back to standard EOCD parsing.
-            (let ((eocd/64 (parse-structure end-of-central-directory/64 input)))
-              (setf entries (make-array (end-of-central-directory/64-central-directory-entries eocd/64)))
-              (seek input (end-of-central-directory/64-central-directory-start eocd/64))
-              (decode-eocd-entries input entries)))))
-      (cond (entries
-             #++"Zip64 EOCD already populated the entries, we're good.")
-            ((= #xFFFFFFFF (end-of-central-directory-central-directory-start eocd))
+            (let ((eocd (parse-structure end-of-central-directory/64 input)))
+              (setf cd-offset (end-of-central-directory/64-central-directory-start eocd))
+              (setf cd-start-disk (end-of-central-directory/64-central-directory-disk eocd))
+              (setf cd-end-disk (end-of-central-directory/64-number-of-disk eocd))
+              (setf entries (make-array (end-of-central-directory/64-central-directory-entries eocd)))))))
+      (cond ((and (null entries) (= #xFFFFFFFF (end-of-central-directory-central-directory-start eocd)))
              (error "File appears corrupted:
 
 No Zip64 End of Central Directory record found, but End of Central
 Directory contains a start marker that indicates there should be
 one."))
             (T
-             (let ((i 0)
-                   (offset (end-of-central-directory-central-directory-start eocd)))
+             (let ((i 0))
                (setf entries (make-array (end-of-central-directory-central-directory-entries eocd)))
-               (loop for disk from (end-of-central-directory-central-directory-disk eocd)
-                     below (end-of-central-directory-number-of-disk eocd)
+               (loop for disk from cd-start-disk below cd-end-disk
                      do (restart-case (error 'archive-file-required :id disk)
                           (use-value (new-input)
-                            (seek new-input offset)
-                            (setf offset 0)
+                            (seek new-input cd-offset)
+                            (setf cd-offset 0)
                             (setf i (decode-central-directory new-input entries i)))))
-               (seek input offset)
+               (seek input cd-offset)
                (decode-central-directory input entries i))))
       entries)))
