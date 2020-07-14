@@ -8,7 +8,11 @@
 
 (defgeneric call-with-decrypted-buffer (function input length state))
 (defgeneric call-with-encrypted-buffer (function input length state))
-(defgeneric make-decryption-state (format input password &key buffer))
+(defgeneric make-decryption-state (format input password &key buffer &allow-other-keys))
+
+(defmethod make-decryption-state (format input password &rest args)
+  (declare (ignore args))
+  (error "Unsupported encryption method: ~a" format))
 
 (defmethod make-decryption-state ((format (eql NIL)) (input vector-input) password &key buffer)
   input)

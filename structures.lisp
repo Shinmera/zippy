@@ -222,3 +222,10 @@ Author: Nicolas Hafner <shinmera@tymoon.eu>
   (signature ub16)
   (padding-value ub16)
   (padding ub8 (- size 4)))
+
+(define-byte-structure (aes-extra-data #x9901)
+  (size ub16)
+  (version ub16)
+  (vendor ub16)
+  (encryption-strength ub8)
+  (compression-method ub16))

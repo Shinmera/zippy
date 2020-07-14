@@ -10,6 +10,9 @@
 (defgeneric call-with-compressed-buffer (function input length state))
 (defgeneric make-decompression-state (format &key buffer))
 
+(defmethod make-decompression-state (format &key buffer)
+  (error "Unsupported compression method: ~a" format))
+
 (defmethod make-decompression-state ((format (eql NIL)) &key buffer)
   NIL)
 
