@@ -35,6 +35,7 @@
 (defclass zip-entry ()
   ((zip-file :initform NIL :accessor zip-file)
    (version :initform NIL :accessor version)
+   (file-type :initform NIL :accessor file-type)
    (attributes :initform NIL :accessor attributes)
    (encryption-method :initform NIL :accessor encryption-method)
    (compression-method :initform NIL :accessor compression-method)
@@ -52,19 +53,17 @@
   (print-unreadable-object (entry stream :type T)
     (format stream "~s" (file-name entry))))
 
-(defun decode-extra-fields (vector index length)
-  (let ((end (+ index length)))
-    (values (loop while (< index end)
-                  for sig = (nibbles:ub16ref/le vector index)
-                  for dec = (gethash sig *structures*)
-                  if dec
-                  collect (multiple-value-bind (struct ind)
-                              (funcall (first dec) vector (+ index 2))
-                            (setf index ind)
-                            struct)
-                  else
-                  do (incf index (+ 4 (nibbles:ub16ref/le vector index))))
-            index)))
+(defun decode-extra-fields (vector)
+  (let ((fields ()))
+    (loop with index = 0
+          while (< index (length vector))
+          do (let* ((sig (nibbles:ub16ref/le vector index))
+                    (dec (gethash sig *structures*)))
+               (incf index 2)
+               (when dec
+                 (push (funcall (first dec) vector index) fields))
+               (incf index (nibbles:ub16ref/le vector index))))
+    (nreverse fields)))
 
 (defun dbg (f &rest args)
   (format T "~& -> ~?~%" f args))
@@ -75,7 +74,11 @@
      (setf (size entry) (zip64-extended-information-compressed-size field))
      (setf (uncompressed-size entry) (zip64-extended-information-original-size field))
      (setf (start entry) (zip64-extended-information-header-offset field))
-     (setf (disk entry) (zip64-extended-information-starting-disk field)))))
+     (setf (disk entry) (zip64-extended-information-starting-disk field)))
+    (encryption-header
+     (setf (encryption-method entry)
+           (list (gethash (encryption-header-encryption-algorithm field) *encryption-method-map*)
+                 (encryption-header-bit-length field))))))
 
 (defun lf-to-entry (lf entry)
   (macrolet ((maybe-set (field value)
@@ -83,23 +86,25 @@
                   (cond ((null (,field entry))
                          (setf (,field entry) value))
                         ((not (equal value (,field entry)))
-                         (warn "Mismatch in entry fields:~%  Central directory: ~a~%  Local file header: ~a"
-                               (,field entry) value))))))
+                         (warn "Mismatch in ~a:~%  Central directory: ~a~%  Local file header: ~a"
+                               ',field (,field entry) value))))))
     (maybe-set version (decode-version (local-file-version lf)))
     (setf (crc-32 entry) (local-file-crc-32 lf))
-    (unless (logbitp 3 (local-file-flags lf))
-      (maybe-set size (local-file-compressed-size entry))
-      (maybe-set uncompressed-size (local-file-uncompressed-size entry)))
+    ;; Ignore if size is not contained or in zip64
+    (unless (or (logbitp 3 (local-file-flags lf))
+                (= #xFFFFFFFF (local-file-compressed-size lf)))
+      (maybe-set size (local-file-compressed-size lf))
+      (maybe-set uncompressed-size (local-file-uncompressed-size lf)))
     (maybe-set compression-method (aref *compression-method-map* (local-file-compression-method lf)))
-    (maybe-set encryption-method (logbitp 0 (local-file-flags lf)))
+    (maybe-set encryption-method (cond ((logbitp 6 (local-file-flags lf)) :strong)
+                                       ((logbitp 0 (local-file-flags lf)) :pkware)))
     (maybe-set file-name (decode-string (local-file-file-name lf) (local-file-flags lf)))
-    (setf (extra-fields entry) (append (extra-fields entry) (decode-extra-fields (local-file-extra lf) 0
-                                                                                 (local-file-extra-field-length lf))))
+    (setf (extra-fields entry) (append (extra-fields entry) (decode-extra-fields (local-file-extra lf))))
     (loop for field in (extra-fields entry)
           do (process-extra-field entry field))))
 
 (defun cde-to-entry (cde entry)
-  (setf (version entry) (decode-version (central-directory-entry-version-made cde)))
+  (setf (version entry) (decode-version (central-directory-entry-version-needed cde)))
   (setf (attributes entry) (list (aref *file-attribute-compatibility-map*
                                        (ldb (byte 8 8) (central-directory-entry-version-made cde)))
                                  (central-directory-entry-external-file-attributes cde)))
@@ -111,13 +116,13 @@
   (setf (last-modified entry) (decode-msdos-timestamp (central-directory-entry-last-modified-date cde)
                                                       (central-directory-entry-last-modified-time cde)))
   (setf (compression-method entry) (aref *compression-method-map* (central-directory-entry-compression-method cde)))
-  (setf (encryption-method entry) (logbitp 0 (central-directory-entry-flags cde)))
+  (setf (encryption-method entry) (cond ((logbitp 6 (central-directory-entry-flags cde)) :strong)
+                                        ((logbitp 0 (central-directory-entry-flags cde)) :pkware)))
   (setf (comment entry) (decode-string (central-directory-entry-file-comment cde)
                                        (central-directory-entry-flags cde)))
   (setf (file-name entry) (decode-string (central-directory-entry-file-name cde)
                                          (central-directory-entry-flags cde)))
-  (setf (extra-fields entry) (decode-extra-fields (central-directory-entry-extra cde) 0
-                                                  (central-directory-entry-extra-field-length cde)))
+  (setf (extra-fields entry) (decode-extra-fields (central-directory-entry-extra cde)))
   (loop for field in (extra-fields entry)
         do (process-extra-field entry field)))
 
@@ -225,3 +230,32 @@ one."))
 
 (defmacro with-zip-file ((file input &key (start 0)) &body body)
   `(call-with-input-zip-file (lambda (,file) ,@body) ,input :start ,start))
+
+(defun decode-entry (function entry)
+  (let ((input (aref (disks (zip-file entry)) (disk entry))))
+    (seek input (start entry))
+    (lf-to-entry (parse-structure* input) entry)
+    ;; Now at beginning of the data payload
+    (if (compression-method entry)
+        T
+        (call-with-decompressed-buffer function input (size entry) (compression-method entry)))))
+
+(defun entry-to-file (path entry &key (if-exists :error))
+  (with-open-file (stream path :direction :output
+                               :element-type '(unsigned-byte 8)
+                               :if-exists if-exists)
+    (flet ((output (buffer start end)
+             (write-sequence buffer stream :start start :end end)))
+      (decode-entry #'output entry))))
+
+(defun extract-zip (file path &key (if-exists :error))
+  (etypecase file
+    (zip-file
+     (loop for entry across (entries file)
+           for full-path = (merge-pathnames (file-name entry) path)
+           do (if (equal '(2 0) (version entry))
+                  (ensure-directories-exist full-path)
+                  (entry-to-file full-path entry :if-exists if-exists))))
+    (T
+     (with-zip-file (zip file)
+       (extract-zip path zip :if-exists if-exists)))))

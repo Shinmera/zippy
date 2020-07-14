@@ -16,6 +16,7 @@
                (:file "parser")
                (:file "tables")
                (:file "compression")
+               (:file "pkware-encryption")
                (:file "encryption")
                (:file "structures")
                (:file "io")

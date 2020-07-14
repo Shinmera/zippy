@@ -13,6 +13,12 @@
           do (setf (svref vec i) e))
     vec))
 
+(defun alist-table (alist)
+  (let ((table (make-hash-table)))
+    (loop for (i . e) in alist
+          do (setf (gethash i table) e))
+    table))
+
 (defparameter *file-attribute-compatibility-map*
   (alist-vector '((0 . :ms-dos)
                   (1 . :amiga)
@@ -61,3 +67,17 @@
                   (97 . :wavpack)
                   (98 . :ppmd)
                   (99 . :ae-x))))
+
+(defparameter *encryption-method-map*
+  (alist-table '((#x6601 . :des)
+                 (#x6602 . :rc2)
+                 (#x6603 . :3des-168)
+                 (#x6609 . :3des-112)
+                 (#x660e . :aes-128) 
+                 (#x660f . :aes-192) 
+                 (#x6610 . :aes-256) 
+                 (#x6702 . :rc2)
+                 (#x6720 . :blowfish)
+                 (#x6721 . :twofish)
+                 (#x6801 . :rc4)
+                 (#xffff . :unknown))))
