@@ -60,8 +60,12 @@
 
 (defun lf-to-entry (lf entry)
   (macrolet ((maybe-set (field value)
-               `(unless (,field entry)
-                  (setf (,field entry) ,value))))
+               `(let ((value ,value))
+                  (cond ((null (,field entry))
+                         (setf (,field entry) value))
+                        ((not (eql value (,field entry)))
+                         (warn "Mismatch in entry fields:~%  Central directory: ~a~%  Local file header: ~a"
+                               (,field entry) value))))))
     (maybe-set version (decode-version (local-file-version lf)))
     (maybe-set attribute-compatibility (aref *file-attribute-compatibility-map*
                                              (ldb (byte 8 8) (local-file-version lf))))
