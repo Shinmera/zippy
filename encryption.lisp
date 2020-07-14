@@ -29,3 +29,7 @@
 (defmethod call-with-decrypted-buffer (function (input vector-input) length (format vector))
   (let ((start (vector-input-index input)))
     (funcall function (vector-input-vector input) start (+ start length))))
+
+;; TODO: Support for AE-X https://www.winzip.com/win/en/aes_info.html
+;; TODO: Support for other encryption methods
+;; TODO: Support for central directory encryption
