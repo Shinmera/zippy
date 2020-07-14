@@ -254,9 +254,8 @@ one."))
     (zip-file
      (loop for entry across (entries file)
            for full-path = (merge-pathnames (file-name entry) path)
-           do (if (equal '(2 0) (version entry))
-                  (ensure-directories-exist full-path)
-                  (entry-to-file full-path entry :if-exists if-exists))))
+           do (ensure-directories-exist full-path)
+              (entry-to-file full-path entry :if-exists if-exists)))
     (T
      (with-zip-file (zip file)
        (extract-zip path zip :if-exists if-exists)))))
