@@ -13,13 +13,14 @@
   :homepage "https://github.com/Shinmera/zippy"
   :serial T
   :components ((:file "package")
+               (:file "toolkit")
                (:file "parser")
+               (:file "io")
                (:file "tables")
                (:file "compression")
                (:file "pkware-encryption")
                (:file "encryption")
                (:file "structures")
-               (:file "io")
                (:file "zippy")
                (:file "documentation"))
   :depends-on (:documentation-utils

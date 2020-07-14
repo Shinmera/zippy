@@ -7,7 +7,8 @@
 (in-package #:org.shirakumo.zippy)
 
 (defstruct (pkware-decrypt-state
-            (:constructor %make-pkware-decrypt-state ()))
+            (:constructor %make-pkware-decrypt-state (buffer)))
+  (buffer NIL :type (simple-array (unsigned-byte 8) (*)))
   (k0 305419896 :type (unsigned-byte 32))
   (k1 591751049 :type (unsigned-byte 32))
   (k2 878082192 :type (unsigned-byte 32)))
@@ -21,15 +22,15 @@
   (setf (pkware-decrypt-state-k0 state) (crc32-rotate (pkware-decrypt-state-k0 state) byte))
   (setf (pkware-decrypt-state-k1 state) (+ (pkware-decrypt-state-k1 state)
                                            (logand (pkware-decrypt-state-k0 state) #xFF)))
-  (setf (pkware-decrypt-state-k1 state) (1+ (* (pkware-decrypt-state-k1 state) 134775813)))
+  (setf (pkware-decrypt-state-k1 state) (logand #xFFFFFFFF (1+ (* (pkware-decrypt-state-k1 state) 134775813))))
   (setf (pkware-decrypt-state-k2 state) (crc32-rotate (pkware-decrypt-state-k2 state) (ash (pkware-decrypt-state-k1 state) -24))))
 
 (defun pkware-decrypt-byte (state)
   (let ((temp (logior 2 (pkware-decrypt-state-k2 state))))
     (ash (* temp (logxor temp 1)) -8)))
 
-(defun make-pkware-decrypt-state (password initial-state index)
-  (let ((state (%make-pkware-decrypt-state)))
+(defun make-pkware-decrypt-state (buffer password initial-state index)
+  (let ((state (%make-pkware-decrypt-state buffer)))
     (loop for byte across password
           do (update-pkware-state state byte))
     (loop for i from index below (+ index 12)

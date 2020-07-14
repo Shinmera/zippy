@@ -60,10 +60,11 @@
           do (let* ((sig (nibbles:ub16ref/le vector index))
                     (dec (gethash sig *structures*)))
                (incf index 2)
-               (when (/= 0 sig)
-                 (when dec
-                   (push (funcall (first dec) vector index) fields))
-                 (incf index (nibbles:ub16ref/le vector index)))))
+               (when dec
+                 (push (funcall (first dec) vector index) fields))
+               (if (< index (length vector))
+                   (incf index (nibbles:ub16ref/le vector index))
+                   (return))))
     (nreverse fields)))
 
 (defun dbg (f &rest args)
@@ -232,30 +233,32 @@ one."))
 (defmacro with-zip-file ((file input &key (start 0)) &body body)
   `(call-with-input-zip-file (lambda (,file) ,@body) ,input :start ,start))
 
-(defun decode-entry (function entry)
+(defun decode-entry (function entry &key password)
   (let ((input (aref (disks (zip-file entry)) (disk entry))))
     (seek input (start entry))
     (lf-to-entry (parse-structure* input) entry)
     ;; Now at beginning of the data payload
-    (if (encryption-method entry)
-        T
-        (call-with-decompressed-buffer function input (size entry) (compression-method entry)))))
+    (let ((decryption-state (make-decryption-state (encryption-method entry) input password))
+          (decompression-state (make-decompression-state (compression-method entry))))
+      (flet ((decompress (buffer start end)
+               (call-with-decompressed-buffer function buffer start end decompression-state)))
+        (call-with-decrypted-buffer #'decompress input (size entry) decryption-state)))))
 
-(defun entry-to-file (path entry &key (if-exists :error))
+(defun entry-to-file (path entry &key (if-exists :error) password)
   (with-open-file (stream path :direction :output
                                :element-type '(unsigned-byte 8)
                                :if-exists if-exists)
     (flet ((output (buffer start end)
              (write-sequence buffer stream :start start :end end)))
-      (decode-entry #'output entry))))
+      (decode-entry #'output entry :password password))))
 
-(defun extract-zip (file path &key (if-exists :error))
+(defun extract-zip (file path &key (if-exists :error) password)
   (etypecase file
     (zip-file
      (loop for entry across (entries file)
            for full-path = (merge-pathnames (file-name entry) path)
            do (ensure-directories-exist full-path)
-              (entry-to-file full-path entry :if-exists if-exists)))
+              (entry-to-file full-path entry :if-exists if-exists :password password)))
     (T
      (with-zip-file (zip file)
        (extract-zip path zip :if-exists if-exists)))))

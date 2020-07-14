@@ -123,19 +123,6 @@
           (T
            `(,(binary-type-writer type) ,name ,stream)))))
 
-(defmacro with-nesting (&body forms)
-  (cond ((null forms)
-         NIL)
-        ((null (cdr forms))
-         (first forms))
-        (T
-         (destructuring-bind (prev . forms) (reverse forms)
-           (loop for form in forms
-                 for copy = (copy-list form)
-                 do (setf (cdr (last copy)) (list prev))
-                    (setf prev copy))
-           prev))))
-
 (defmacro define-byte-structure (name &body records)
   (destructuring-bind (name signature) (if (listp name) name (list name NIL))
     (let ((fields (mapcar #'first records))

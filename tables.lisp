@@ -6,19 +6,6 @@
 
 (in-package #:org.shirakumo.zippy)
 
-(defun alist-vector (alist)
-  (let* ((max (loop for cons in alist maximize (car cons)))
-         (vec (make-array (1+ max) :initial-element :unknown)))
-    (loop for (i . e) in alist
-          do (setf (svref vec i) e))
-    vec))
-
-(defun alist-table (alist)
-  (let ((table (make-hash-table)))
-    (loop for (i . e) in alist
-          do (setf (gethash i table) e))
-    table))
-
 (defparameter *file-attribute-compatibility-map*
   (alist-vector '((0 . :ms-dos)
                   (1 . :amiga)
