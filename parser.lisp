@@ -22,6 +22,18 @@
                             signature))))
     (funcall (second parser) stream)))
 
+(defun encode-structure (structure vector index)
+  (let ((parser (or (gethash (type-of structure) *structures*)
+                    (error "Don't know how to serialise a structure of type~%  ~a"
+                           (type-of structure)))))
+    (funcall (third parser) vector index)))
+
+(defun write-structure (structure stream)
+  (let ((parser (or (gethash (type-of structure) *structures*)
+                    (error "Don't know how to serialise a structure of type~%  ~a"
+                           (type-of structure)))))
+    (funcall (fourth parser) stream)))
+
 (defun integer-binary-type (integer)
   (cond ((<= integer #xFF) 'ub8)
         ((<= integer #xFFFF) 'ub16)
@@ -60,6 +72,14 @@
     (ub32 'nibbles:read-ub32/le)
     (ub64 'nibbles:read-ub64/le)
     (character 'read-byte)))
+
+(defun binary-type-encoder (type)
+  (ecase type
+    (ub8 'aref)
+    (ub16 'nibbles::ub16set/le)
+    (ub32 'nibbles::ub32set/le)
+    (ub64 'nibbles::ub64set/le)
+    (character 'aref)))
 
 (defun binary-type-writer (type)
   (ecase type
@@ -108,6 +128,25 @@
           (T
            `(setf ,name (,(binary-type-reader type) ,stream))))))
 
+(defun generate-record-encoder (record vector index)
+  (destructuring-bind (name type &optional count) record
+    (cond ((typep type 'integer)
+           (let ((btype (integer-binary-type type)))
+             `(progn (,(binary-type-encoder btype) ,vector ,index ,type)
+                     (incf ,index ,(binary-type-size btype)))))
+          (count
+           (if (eql type 'character)
+               `(let ((vec (babel:string-to-octets ,name :encoding :utf-8)))
+                  (loop for char across vec
+                        do (setf (aref ,vector ,index) char)
+                           (incf ,index)))
+               `(loop for i from 0 below ,count
+                      do (,(binary-type-encoder type) ,vector ,index (aref ,name i))
+                         (incf ,index ,(binary-type-size type)))))
+          (T
+           `(progn (,(binary-type-encoder type) ,vector ,index ,name)
+                   (incf ,index ,(binary-type-size type)))))))
+
 (defun generate-record-writer (record stream)
   (destructuring-bind (name type &optional count) record
     (cond ((typep type 'integer)
@@ -129,31 +168,50 @@
           (constructor (intern (format NIL "~a-~a" 'make name)))
           (decode-name (intern (format NIL "~a-~a" 'decode name)))
           (read-name (intern (format NIL "~a-~a" 'read name)))
+          (encode-name (intern (format NIL "~a-~a" 'encode name)))
           (write-name (intern (format NIL "~a-~a" 'write name))))
       `(progn
          (defstruct (,name (:constructor ,constructor ,fields))
            ,@fields)
          (defun ,decode-name (vector index &optional (size most-positive-fixnum))
-           (let ,(loop for record in records unless (eql (first record) 'size) collect (first record))
+           (let ,(remove 'size fields)
              (block NIL
                ,@(loop for record in records
                        collect `(when (<= size 0) (return))
                        collect (generate-record-decoder record 'vector 'index)))
              (values (,constructor ,@fields) index)))
          (defun ,read-name (stream)
-           (let ,(loop for record in records collect (first record))
+           (let ,fields
              ,@(loop for record in records
                      collect (generate-record-reader record 'stream))
              (,constructor ,@fields)))
+         (defun ,encode-name (structure vector index)
+           ,@(typecase signature
+               ((unsigned-byte 16)
+                `((nibbles::ub16set/le vector index ,signature)
+                  (incf index 2)))
+               ((unsigned-byte 32)
+                `((nibbles::ub32set/le vector index ,signature)
+                  (incf index 4))))
+           (with-slots ,fields structure
+             ,@(loop for record in records
+                     collect (generate-record-encoder record 'vector 'index))))
          (defun ,write-name (structure stream)
-           ,@(when signature
-               `((nibbles:write-ub32/le ,signature stream)))
+           ,@(typecase signature
+               ((unsigned-byte 16)
+                `((nibbles:write-ub16/le ,signature stream)))
+               ((unsigned-byte 32)
+                `((nibbles:write-ub32/le ,signature stream))))
            (with-slots ,fields structure
              ,@(loop for record in records
                      collect (generate-record-writer record 'stream))))
          ,@(when signature
-             `((setf (gethash ,signature *structures*)
-                     (list #',decode-name #',read-name #',write-name))))))))
+             `((setf (gethash ',name *structures*)
+                     (setf (gethash ,signature *structures*)
+                           (list #',decode-name #',read-name #',encode-name #',write-name)))))))))
+
+(defun decode-string (octets flags)
+  (babel:octets-to-string octets :encoding (if (logbitp 11 flags) :utf-8 :cp437)))
 
 (defun decode-msdos-timestamp (date time)
   (let ((yy (ldb (byte 7 9) date))
@@ -176,9 +234,12 @@
       (setf (ldb (byte 5 0) time) (floor s 2))
       (values date time))))
 
-(defun decode-string (octets flags)
-  (babel:octets-to-string octets :encoding (if (logbitp 11 flags) :utf-8 :cp437)))
-
 (defun decode-version (version)
   (multiple-value-bind (major minor) (floor (ldb (byte 8 0) version) 10)
     (list major minor)))
+
+(defun encode-version (version compatibility)
+  (let ((idx (position compatibility *file-attribute-compatibility-map*))
+        (int (+ (* 10 (first version)) (second version))))
+    (setf (ldb (byte 8 8) int) idx)
+    int))

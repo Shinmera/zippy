@@ -32,3 +32,16 @@
     (loop for (i . e) in alist
           do (setf (gethash i table) e))
     table))
+
+(defun cap (value bits)
+  (let ((max (1- (ash 1 bits))))
+    (if (< max value)
+        max
+        value)))
+
+(defun bitfield (&rest bits)
+  (let ((int 0))
+    (loop for i from 0
+          for bit in bits
+          do (when bit (setf (ldb (byte 1 i) int) 1)))
+    int))

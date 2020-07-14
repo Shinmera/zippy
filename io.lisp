@@ -45,6 +45,17 @@
     (stream
      (nibbles:read-ub32/le input))))
 
+(defun output (output array start end)
+  (etypecase output
+    (vector-input
+     (loop with vector = (vector-input-vector output)
+           for i from start below end
+           for j from (vector-input-index output)
+           do (setf (aref vector j) (aref array i)))
+     (incf (vector-input-index output) (- end start)))
+    (stream
+     (write-sequence array output :start start :end end))))
+
 (defun parse-structure* (input)
   (etypecase input
     (vector-input
@@ -54,6 +65,15 @@
        value))
     (stream
      (read-structure input))))
+
+(defun write-structure* (structure input)
+  (etypecase input
+    (vector-input
+     (setf (vector-input-index input)
+           (encode-structure structure (vector-input-vector input) (vector-input-index input))))
+    (stream
+     (write-structure structure input)))
+  input)
 
 (defmacro parse-structure (structure-type input-var)
   (let ((input (gensym "INPUT")))

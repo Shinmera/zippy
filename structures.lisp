@@ -17,7 +17,7 @@ Author: Nicolas Hafner <shinmera@tymoon.eu>
   (uncompressed-size ub32)
   (file-name-length ub16)
   (extra-field-length ub16)
-  (file-name character file-name-length)
+  (file-name ub8 file-name-length)
   (extra ub8 extra-field-length))
 
 (define-byte-structure (data-descriptor #x08074B50)
@@ -51,9 +51,9 @@ Author: Nicolas Hafner <shinmera@tymoon.eu>
   (internal-file-attributes ub16)
   (external-file-attributes ub32)
   (local-header-offset ub32)
-  (file-name character file-name-length)
+  (file-name ub8 file-name-length)
   (extra ub8 extra-field-length)
-  (file-comment character file-comment-length))
+  (file-comment ub8 file-comment-length))
 
 (define-byte-structure (digital-signature #x05054B50)
   (size ub16)
@@ -69,7 +69,7 @@ Author: Nicolas Hafner <shinmera@tymoon.eu>
   (central-directory-entries ub64)
   (central-directory-size ub64)
   (central-directory-start ub64)
-  (data-sector character (- size 44)))
+  (data-sector ub8 (- size 44)))
 
 (define-byte-structure (end-of-central-directory-locator/64 #x07064B50)
   (central-directory-disk ub32)
@@ -84,7 +84,7 @@ Author: Nicolas Hafner <shinmera@tymoon.eu>
   (central-directory-size ub32)
   (central-directory-start ub32)
   (file-comment-length ub16)
-  (file-comment character file-comment-length))
+  (file-comment ub8 file-comment-length))
 
 ;;; Extensible data fields
 (define-byte-structure (zip64-extended-information #x00001)

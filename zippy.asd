@@ -21,6 +21,8 @@
                (:file "encryption")
                (:file "pkware-encryption")
                (:file "structures")
+               (:file "decode")
+               (:file "encode")
                (:file "zippy")
                (:file "documentation"))
   :depends-on (:documentation-utils
