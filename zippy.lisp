@@ -60,9 +60,10 @@
           do (let* ((sig (nibbles:ub16ref/le vector index))
                     (dec (gethash sig *structures*)))
                (incf index 2)
-               (when dec
-                 (push (funcall (first dec) vector index) fields))
-               (incf index (nibbles:ub16ref/le vector index))))
+               (when (/= 0 sig)
+                 (when dec
+                   (push (funcall (first dec) vector index) fields))
+                 (incf index (nibbles:ub16ref/le vector index)))))
     (nreverse fields)))
 
 (defun dbg (f &rest args)
@@ -236,7 +237,7 @@ one."))
     (seek input (start entry))
     (lf-to-entry (parse-structure* input) entry)
     ;; Now at beginning of the data payload
-    (if (compression-method entry)
+    (if (encryption-method entry)
         T
         (call-with-decompressed-buffer function input (size entry) (compression-method entry)))))
 

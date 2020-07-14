@@ -73,32 +73,40 @@
   (destructuring-bind (name type &optional count) record
     (cond ((typep type 'integer)
            (let ((btype (integer-binary-type type)))
-             `(let ((,name (,(binary-type-decoder btype) ,vector ,index)))
+             `(progn
+                (decf size ,(binary-type-size btype))
+                (setf ,name (,(binary-type-decoder btype) ,vector ,index))
                 (incf ,index ,(binary-type-size btype))
                 (unless (= ,type ,name)
                   (error "Record does not match signature.")))))
           (count
-           `(let ((,name (make-array ,count :element-type ',(binary-type-type type))))
+           `(progn
+              (setf ,name (make-array ,count :element-type ',(binary-type-type type)))
+              (decf size (* (length ,name) ,(binary-type-size type)))
               (loop for i from 0 below (length ,name)
                     do (setf (aref ,name i) (,(binary-type-decoder type) ,vector ,index))
                        (incf ,index ,(binary-type-size type)))))
           (T
-           `(let ((,name (,(binary-type-decoder type) ,vector ,index)))
+           `(progn
+              (decf size ,(binary-type-size type))
+              (setf ,name (,(binary-type-decoder type) ,vector ,index))
               (incf ,index ,(binary-type-size type)))))))
 
 (defun generate-record-reader (record stream)
   (destructuring-bind (name type &optional count) record
     (cond ((typep type 'integer)
            (let ((btype (integer-binary-type type)))
-             `(let ((,name (,(binary-type-reader btype) ,stream)))
+             `(progn
+                (setf ,name (,(binary-type-reader btype) ,stream))
                 (unless (= ,type ,name)
                   (error "Record does not match signature.")))))
           (count
-           `(let ((,name (make-array ,count :element-type ',(binary-type-type type))))
+           `(progn
+              (setf ,name (make-array ,count :element-type ',(binary-type-type type)))
               (loop for i from 0 below (length ,name)
                     do (setf (aref ,name i) (,(binary-type-reader type) ,stream)))))
           (T
-           `(let ((,name (,(binary-type-reader type) ,stream))))))))
+           `(setf ,name (,(binary-type-reader type) ,stream))))))
 
 (defun generate-record-writer (record stream)
   (destructuring-bind (name type &optional count) record
@@ -138,23 +146,24 @@
       `(progn
          (defstruct (,name (:constructor ,constructor ,fields))
            ,@fields)
-         (defun ,decode-name (vector index)
-           (with-nesting
-             ,@(loop for record in records
-                     collect (generate-record-decoder record 'vector 'index))
+         (defun ,decode-name (vector index &optional (size most-positive-fixnum))
+           (let ,(loop for record in records unless (eql (first record) 'size) collect (first record))
+             (block NIL
+               ,@(loop for record in records
+                       collect `(when (<= size 0) (return))
+                       collect (generate-record-decoder record 'vector 'index)))
              (values (,constructor ,@fields) index)))
          (defun ,read-name (stream)
-           (with-nesting
+           (let ,(loop for record in records collect (first record))
              ,@(loop for record in records
                      collect (generate-record-reader record 'stream))
              (,constructor ,@fields)))
          (defun ,write-name (structure stream)
            ,@(when signature
                `((nibbles:write-ub32/le ,signature stream)))
-           (with-nesting
-             (with-slots ,fields structure
-               ,@(loop for record in records
-                       collect (generate-record-writer record 'stream)))))
+           (with-slots ,fields structure
+             ,@(loop for record in records
+                     collect (generate-record-writer record 'stream))))
          ,@(when signature
              `((setf (gethash ,signature *structures*)
                      (list #',decode-name #',read-name #',write-name))))))))
