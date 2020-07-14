@@ -12,11 +12,30 @@
                                  (slot-value c 'id)))))
 
 (defclass zip-file ()
-  (entries))
+  ((entries :initarg :entries :accessor entries)
+   (disks :initarg :disks :accessor disks)))
+
+(defmethod close ((file zip-file) &key abort)
+  (when (disks file)
+    (loop for disk across (disks file)
+          do (when (streamp disk)
+               (close disk :abort abort)))
+    (setf (disks file) NIL)))
+
+(defmethod print-object ((file zip-file) stream)
+  (let ((disk (when (disks file) (aref (disks file) (1- (length (disks file)))))))
+    (print-unreadable-object (file stream :type T)
+      (etypecase disk
+        (stream (if (open-stream-p disk)
+                    (format stream "~s" (pathname disk))
+                    (format stream "CLOSED")))
+        (vector-input (format stream "[VECTOR]"))
+        (null (format stream "CLOSED"))))))
 
 (defclass zip-entry ()
-  ((version :initform NIL :accessor version)
-   (attribute-compatibility :initform NIL :accessor attribute-compatibility)
+  ((zip-file :initform NIL :accessor zip-file)
+   (version :initform NIL :accessor version)
+   (attributes :initform NIL :accessor attributes)
    (encryption-method :initform NIL :accessor encryption-method)
    (compression-method :initform NIL :accessor compression-method)
    (last-modified :initform NIL :accessor last-modified)
@@ -63,12 +82,10 @@
                `(let ((value ,value))
                   (cond ((null (,field entry))
                          (setf (,field entry) value))
-                        ((not (eql value (,field entry)))
+                        ((not (equal value (,field entry)))
                          (warn "Mismatch in entry fields:~%  Central directory: ~a~%  Local file header: ~a"
                                (,field entry) value))))))
     (maybe-set version (decode-version (local-file-version lf)))
-    (maybe-set attribute-compatibility (aref *file-attribute-compatibility-map*
-                                             (ldb (byte 8 8) (local-file-version lf))))
     (setf (crc-32 entry) (local-file-crc-32 lf))
     (unless (logbitp 3 (local-file-flags lf))
       (maybe-set size (local-file-compressed-size entry))
@@ -83,8 +100,9 @@
 
 (defun cde-to-entry (cde entry)
   (setf (version entry) (decode-version (central-directory-entry-version-made cde)))
-  (setf (attribute-compatibility entry) (aref *file-attribute-compatibility-map*
-                                              (ldb (byte 8 8) (central-directory-entry-version-made cde))))
+  (setf (attributes entry) (list (aref *file-attribute-compatibility-map*
+                                       (ldb (byte 8 8) (central-directory-entry-version-made cde)))
+                                 (central-directory-entry-external-file-attributes cde)))
   (setf (crc-32 entry) (central-directory-entry-crc-32 cde))
   (setf (size entry) (central-directory-entry-compressed-size cde))
   (setf (uncompressed-size entry) (central-directory-entry-uncompressed-size cde))
@@ -115,7 +133,7 @@
     i))
 
 (defun decode (input)
-  (let (entries)
+  (let (entries disks)
     ;; First seek to end of file, then backtrack to find the end-of-central-directory signature.
     ;; We skip the bytes that are guaranteed to be part of the structure anyway. Thus, if the
     ;; comment is empty, we should immediately end up at the signature.
@@ -143,15 +161,20 @@
             (restart-case (error 'archive-file-required :id (end-of-central-directory-locator/64-central-directory-disk eocd-locator))
               (use-value (new-input)
                 (setf eocd64-input new-input))))
+          (setf disks (make-array (end-of-central-directory-locator/64-number-of-disks eocd-locator) :initial-element NIL))
+          (setf (aref disks (end-of-central-directory-locator/64-central-directory-disk eocd-locator)) eocd64-input)
           ;; Okey, header is on here, let's check it.
           (seek eocd64-input (end-of-central-directory-locator/64-central-directory-start eocd-locator))
-          (when (= #x06064B50 (ub32 input))
-            ;; If we had not found the header we would fall back to standard EOCD parsing.
-            (let ((eocd (parse-structure end-of-central-directory/64 input)))
-              (setf cd-offset (end-of-central-directory/64-central-directory-start eocd))
-              (setf cd-start-disk (end-of-central-directory/64-central-directory-disk eocd))
-              (setf cd-end-disk (end-of-central-directory/64-number-of-disk eocd))
-              (setf entries (make-array (end-of-central-directory/64-central-directory-entries eocd)))))))
+          (if (= #x06064B50 (ub32 eocd64-input))
+              (let ((eocd (parse-structure end-of-central-directory/64 eocd64-input)))
+                (setf cd-offset (end-of-central-directory/64-central-directory-start eocd))
+                (setf cd-start-disk (end-of-central-directory/64-central-directory-disk eocd))
+                (setf cd-end-disk (end-of-central-directory/64-number-of-disk eocd))
+                (setf entries (make-array (end-of-central-directory/64-central-directory-entries eocd) :initial-element NIL)))
+              (warn "File appears corrupted: 
+
+Zip64 End of Central Directory Record was not at indicated position.
+Will attempt to continue with 32 bit standard central directory."))))
       (cond ((and (null entries) (= #xFFFFFFFF (end-of-central-directory-central-directory-start eocd)))
              (error "File appears corrupted:
 
@@ -160,13 +183,45 @@ Directory contains a start marker that indicates there should be
 one."))
             (T
              (let ((i 0))
-               (setf entries (make-array (end-of-central-directory-central-directory-entries eocd)))
-               (loop for disk from cd-start-disk below cd-end-disk
-                     do (restart-case (error 'archive-file-required :id disk)
-                          (use-value (new-input)
-                            (seek new-input cd-offset)
-                            (setf cd-offset 0)
-                            (setf i (decode-central-directory new-input entries i)))))
-               (seek input cd-offset)
-               (decode-central-directory input entries i))))
-      entries)))
+               (unless entries
+                 (setf entries (make-array (end-of-central-directory-central-directory-entries eocd) :initial-element NIL)))
+               (unless disks
+                 (setf disks (make-array (1+ (end-of-central-directory-number-of-disk eocd)) :initial-element NIL)))
+               (unless (= #xFFFF (end-of-central-directory-number-of-disk eocd))
+                 (setf (aref disks (end-of-central-directory-number-of-disk eocd)) input))
+               (loop for disk from cd-start-disk to cd-end-disk
+                     for input = (or (aref disks disk)
+                                     (restart-case (error 'archive-file-required :id disk)
+                                       (use-value (new-input)
+                                         (setf (aref disks disk) new-input))))
+                     do (seek input cd-offset)
+                        (setf cd-offset 0)
+                        (setf i (decode-central-directory input entries i))))))
+      (let ((zip-file (make-instance 'zip-file :entries entries :disks disks)))
+        (loop for entry across entries
+              do (setf (zip-file entry) zip-file))
+        zip-file))))
+
+(defun call-with-input-zip-file (function input &key (start 0))
+  (etypecase input
+    ((or pathname string)
+     (let ((streams ()))
+       (handler-bind ((archive-file-required
+                        (lambda (c)
+                          (let ((id (slot-value c 'id)))
+                            (let ((stream (open (make-pathname :type (format NIL "z~2,'0d" (1+ id)) :defaults input)
+                                                :element-type '(unsigned-byte 8))))
+                              (push stream streams)
+                              (use-value stream))))))
+         (with-open-file (stream input :element-type '(unsigned-byte 8))
+           (unwind-protect
+                (let ((file (decode stream)))
+                  (funcall function file))
+             (mapc #'close streams))))))
+    (stream
+     (funcall function (decode input)))
+    (vector
+     (funcall function (decode (make-vector-input input start))))))
+
+(defmacro with-zip-file ((file input &key (start 0)) &body body)
+  `(call-with-input-zip-file (lambda (,file) ,@body) ,input :start ,start))
