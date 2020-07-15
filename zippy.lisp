@@ -59,6 +59,31 @@
   ;; TODO: restore other extended attributes from the extra block (uid/gid/etc)
   (setf (file-attributes:permissions path) (second (attributes entry))))
 
+(defun entry-to-stream (stream entry &key password)
+  (flet ((output (buffer start end)
+           (write-sequence buffer stream :start start :end end)))
+    (decode-entry #'output entry :password password)))
+
+(defun entry-to-vector (entry &key vector password)
+  (let ((vector (etypecase vector
+                  ((vector (unsigned-byte 8)) vector)
+                  (null (make-array (uncompressed-size entry) :element-type '(unsigned-byte 8)))))
+        (i 0))
+    (flet ((output (buffer start end)
+             #+sbcl
+             (sb-sys:with-pinned-objects (vector buffer)
+               (let ((vector (sb-sys:vector-sap vector))
+                     (buffer (sb-sys:vector-sap buffer)))
+                 (sb-alien:alien-funcall (sb-alien:extern-alien "memcpy" (function sb-alien:void sb-sys:system-area-pointer sb-sys:system-area-pointer sb-alien:size-t))
+                                         (sb-sys:sap+ vector i) (sb-sys:sap+ buffer start) (- end start))
+                 (incf i (- end start))))
+             #-sbcl
+             (loop for j from start below end
+                   do (setf (aref vector i) (aref buffer j))
+                      (incf i))))
+      (decode-entry #'output entry :password password)
+      vector)))
+
 (defun extract-zip (file path &key (if-exists :error) password)
   (etypecase file
     (zip-file

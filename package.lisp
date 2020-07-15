@@ -113,5 +113,7 @@
    #:comment
    #:content
    #:entry-to-file
+   #:entry-to-stream
+   #:entry-to-vector
    #:extract-zip
    #:compress-zip))

@@ -137,6 +137,8 @@ If the zip file is split a condition of type ARCHIVE-FILE-REQUIRED may
 be signalled.
 
 See ENTRY-TO-FILE
+See ENTRY-TO-STREAM
+See ENTRY-TO-VECTOR
 See ARCHIVE-FILE-REQUIRED"))
 
 ;; encode.lisp
@@ -423,6 +425,12 @@ See MAKE-ENCRYPTION-STATE"))
     "")
   
   (function entry-to-file
+    "")
+
+  (function entry-to-stream
+    "")
+
+  (function entry-to-vector
     "")
   
   (function extract-zip
