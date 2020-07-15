@@ -25,9 +25,6 @@
                    (return))))
     (nreverse fields)))
 
-(defun dbg (f &rest args)
-  (format T "~& -> ~?~%" f args))
-
 (defun process-extra-field (entry field)
   (typecase field
     (zip64-extended-information

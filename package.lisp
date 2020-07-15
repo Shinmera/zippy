@@ -8,5 +8,109 @@
   (:use #:cl)
   (:local-nicknames
    (#:file-attributes #:org.shirakumo.file-attributes))
+  ;; compression.lisp
+  (:export
+   #:make-decompression-state
+   #:call-with-decompressed-buffer
+   #:make-compression-state
+   #:call-with-compressed-buffer)
+  ;; decode.lisp
+  (:export
+   #:archive-file-required
+   #:disk
+   #:with-zip-file
+   #:decode-entry)
+  ;; encode.lisp
+  (:export
+   #:*version*
+   #:*compatibility*)
+  ;; encryption.lisp
+  (:export
+   #:make-decryption-state
+   #:call-with-decrypted-buffer
+   #:make-encryption-state
+   #:call-with-encrypted-buffer)
+  ;; io.lisp
+  (:export
+   #:io
+   #:vector-input
+   #:vector-input-vector
+   #:vector-input-index
+   #:seek
+   #:has-more
+   #:index
+   #:size
+   #:ub32
+   #:output
+   #:parse-structure*
+   #:write-structure*
+   #:parse-structure
+   #:with-io)
+  ;; parser.lisp
+  (:export
+   #:decode-structure
+   #:read-structure
+   #:encode-structure
+   #:write-structure
+   #:define-byte-structure)
+  ;; structures.lisp
+  (:export
+   #:zip64-extended-information
+   #:os/2
+   #:ntfs
+   #:openvms
+   #:unix
+   #:patch-descriptor
+   #:pkcs7-store
+   #:x509-file
+   #:x509-central-directory
+   #:encryption-header
+   #:record-management-controls
+   #:pkcs7-encryption-recipient-certificate-list
+   #:mvs
+   #:policy-decryption-key-record
+   #:key-provider-record
+   #:policy-key-data-record
+   #:zipit-macintosh-long
+   #:zipit-macintosh-short-file
+   #:zipit-macintosh-short-dir
+   #:infozip-unicode-comment
+   #:infozip-unicode-path
+   #:data-stream-alignment
+   #:microsoft-open-packaging-growth-hint
+   #:aes-extra-data)
+  ;; tables.lisp
+  (:export
+   #:file-attribute-name
+   #:file-attribute-id
+   #:compression-method-name
+   #:compression-method-id
+   #:encryption-method-name
+   #:encryption-method-id)
+  ;; toolkit.lisp
+  (:export)
   ;; zippy.lisp
-  (:export))
+  (:export
+   #:zip-file
+   #:entries
+   #:disks
+   #:comment
+   #:zip-entry
+   #:zip-file
+   #:version
+   #:attributes
+   #:encryption-method
+   #:compression-method
+   #:crc-32
+   #:disk
+   #:start
+   #:size
+   #:uncompressed-size
+   #:extra-fields
+   #:last-modified
+   #:file-name
+   #:comment
+   #:content
+   #:entry-to-file
+   #:extract-zip
+   #:compress-zip))

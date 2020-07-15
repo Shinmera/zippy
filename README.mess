@@ -12,6 +12,8 @@ Zippy is a library for the PKWARE Zip archive format. It can read and write zip 
 - Extensible for other encryption and compression mechanisms
 
 ## How To
+For this tutorial we will assume the ``org.shirakumo.zippy`` package has a local-nickname of ``zippy``.
+
 Extracting a zip file to disk is straight-forward:
 
 ::
