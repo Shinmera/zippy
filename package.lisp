@@ -6,5 +6,7 @@
 
 (defpackage #:org.shirakumo.zippy
   (:use #:cl)
+  (:local-nicknames
+   (#:file-attributes #:org.shirakumo.file-attributes))
   ;; zippy.lisp
   (:export))

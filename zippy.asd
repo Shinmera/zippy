@@ -10,7 +10,9 @@
   :author "Nicolas Hafner <shinmera@tymoon.eu>"
   :maintainer "Nicolas Hafner <shinmera@tymoon.eu>"
   :description "A fast zip archive library"
-  :homepage "https://github.com/Shinmera/zippy"
+  :homepage "https://shinmera.github.io/zippy"
+  :bug-tracker "https://github.com/Shinmera/zippy/issues"
+  :source-control (:git "https://github.com/Shinmera/zippy.git")
   :serial T
   :components ((:file "package")
                (:file "toolkit")
@@ -26,6 +28,7 @@
                (:file "encode")
                (:file "documentation"))
   :depends-on (:documentation-utils
+               :file-attributes
                :alexandria
                :nibbles
                :babel

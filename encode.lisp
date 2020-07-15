@@ -14,6 +14,11 @@
   #+darwin :darwin
   #+(and unix (not darwin)) :unix)
 
+(defun default-attributes-for (system)
+  (case system
+    ((:darwin :unix) #o644)
+    (T 0)))
+
 (defun entry-flags (entry)
   (bitfield (encryption-method entry)
             NIL
@@ -27,22 +32,29 @@
 
 (defun backfill-from-content (entry)
   (let ((content (content entry)))
-    ;; FIXME: File attributes (needs non-standard API :/)
     (etypecase content
       (file-stream
        (setf (last-modified entry) (file-write-date content))
        (setf (uncompressed-size entry) (file-length content))
        (unless (file-name entry)
-         (setf (file-name entry) (file-namestring content))))
+         (setf (file-name entry) (file-namestring content)))
+       (unless (attributes entry)
+         (setf (attributes entry) (list *compatibility*
+                                        (file-attributes:permissions content)))))
       ((or string pathname)
        (setf (last-modified entry) (file-write-date content))
        (unless (file-name entry)
-         (setf (file-name entry) (file-namestring content))))
+         (setf (file-name entry) (file-namestring content)))
+       (unless (attributes entry)
+         (setf (attributes entry) (list *compatibility*
+                                        (file-attributes:permissions content)))))
       (stream)
       (vector-input
        (setf (uncompressed-size entry) (size content)))
       (vector
        (setf (uncompressed-size entry) (length content))))
+    (unless (attributes entry)
+      (setf (attributes entry) (list *compatibility* (default-attributes-for *compatibility*))))
     (when (and (null (compression-method entry))
                (< 1024 (or (uncompressed-size entry) 1025)))
       (setf (compression-method entry) :deflate))))

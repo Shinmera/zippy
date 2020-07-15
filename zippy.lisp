@@ -55,7 +55,9 @@
                                :if-exists if-exists)
     (flet ((output (buffer start end)
              (write-sequence buffer stream :start start :end end)))
-      (decode-entry #'output entry :password password))))
+      (decode-entry #'output entry :password password)))
+  ;; TODO: restore other extended attributes from the extra block (uid/gid/etc)
+  (setf (file-attributes:permissions path) (second (attributes entry))))
 
 (defun extract-zip (file path &key (if-exists :error) password)
   (etypecase file
