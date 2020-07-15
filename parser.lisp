@@ -213,6 +213,11 @@
 (defun decode-string (octets flags)
   (babel:octets-to-string octets :encoding (if (logbitp 11 flags) :utf-8 :cp437)))
 
+(defun encode-string (string)
+  (if string
+      (babel:string-to-octets string :encoding :utf-8)
+      #()))
+
 (defun decode-msdos-timestamp (date time)
   (let ((yy (ldb (byte 7 9) date))
         (mm (ldb (byte 4 5) date))

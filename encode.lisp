@@ -74,7 +74,7 @@
         (add-extra-entry extra (make-zip64-extended-information
                                 28 (size entry) (uncompressed-size entry)
                                 (start entry) 0)))
-      (destructuring-bind (method bittage) (enlist (encryption-method entry))
+      (destructuring-bind (&optional method bittage) (enlist (encryption-method entry))
         (case method
           (:ae-1
            (add-extra-entry extra (make-aes-extra-data
@@ -92,7 +92,7 @@
                                      (192 2)
                                      (256 3))
                                    (compression-method-id (compression-method entry)))))
-          (:pkware)
+          ((:pkware NIL))
           (T
            (add-extra-entry extra (make-encryption-header
                                    8 2 (encryption-method-id method)
@@ -101,8 +101,8 @@
                        (entry-flags entry)
                        (entry-compression-id entry)
                        date time (or (crc-32 entry) 0)
-                       (if (size entry) (cap (size entry) 32))
-                       (if (uncompressed-size entry) (cap (uncompressed-size entry) 32))
+                       (if (size entry) (cap (size entry) 32) 0)
+                       (if (uncompressed-size entry) (cap (uncompressed-size entry) 32) 0)
                        (length file-name) (length extra) file-name extra))))
 
 (defun entry-to-dd (entry)
@@ -113,9 +113,7 @@
 (defun entry-to-cd (entry)
   (multiple-value-bind (date time) (encode-msdos-timestamp (last-modified entry))
     (let ((file-name (babel:string-to-octets (file-name entry) :encoding :utf-8))
-          (comment (if (comment entry)
-                       (babel:string-to-octets (comment entry) :encoding :utf-8)
-                       #()))
+          (comment (encode-string (comment entry)))
           (extra (make-array 0 :adjustable T :element-type '(unsigned-byte 8))))
       (when (or (<= #xFFFFFFFF (size entry))
                 (<= #xFFFFFFFF (start entry)))
@@ -128,8 +126,8 @@
        (entry-flags entry)
        (entry-compression-id entry)
        date time (or (crc-32 entry) 0)
-       (if (size entry) (cap (size entry) 32))
-       (if (uncompressed-size entry) (cap (uncompressed-size entry) 32))
+       (if (size entry) (cap (size entry) 32) 0)
+       (if (uncompressed-size entry) (cap (uncompressed-size entry) 32) 0)
        (length file-name) (length extra) (length comment)
        0 0 (or (second (attributes entry)) 0) (cap (start entry) 32)
        file-name extra comment))))
@@ -179,7 +177,7 @@
     (loop for entry across (entries zip-file)
           do (write-structure* (entry-to-cd entry) output))
     (let ((cd-end (index output))
-          (comment (or (comment zip-file) "")))
+          (comment (encode-string (comment zip-file))))
       (write-structure* (make-end-of-central-directory/64
                          44
                          (encode-version *version* *compatibility*)
