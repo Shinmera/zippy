@@ -9,8 +9,8 @@
 (defgeneric make-decompression-state (format &key buffer))
 (defgeneric call-with-decompressed-buffer (function vector start end state))
 
-(defgeneric make-compression-state (format input &key buffer))
-(defgeneric call-with-compressed-buffer (function input state))
+(defgeneric make-compression-state (format &key buffer))
+(defgeneric call-with-compressed-buffer (function vector start end state))
 
 (defmethod make-decompression-state (format &key buffer)
   (error "Unsupported compression method: ~a" format))
@@ -33,16 +33,8 @@
                  ((3bz:output-overflow state)
                   (3bz:replace-output-buffer state (3bz::ds-output-buffer state))))))
 
-(defmethod make-compression-state ((format (eql NIL)) (input vector-input) &key buffer)
+(defmethod make-compression-state ((format (eql NIL)) &key buffer)
   NIL)
 
-(defmethod make-compression-state ((format (eql NIL)) (input stream) &key buffer)
-  (ensure-buffer buffer))
-
-(defmethod call-with-compressed-buffer (function (input vector-input) state)
-  (funcall function (vector-input-vector input) (vector-input-index input) (length (vector-input-vector input))))
-
-(defmethod call-with-compressed-buffer (function (input stream) buffer)
-  (loop for read = (read-sequence buffer input)
-        while (< 0 read)
-        do (funcall function buffer 0 read)))
+(defmethod call-with-compressed-buffer (function vector start end (state null))
+  (funcall function vector start end))

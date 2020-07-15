@@ -21,9 +21,9 @@
                (:file "encryption")
                (:file "pkware-encryption")
                (:file "structures")
+               (:file "zippy")
                (:file "decode")
                (:file "encode")
-               (:file "zippy")
                (:file "documentation"))
   :depends-on (:documentation-utils
                :alexandria

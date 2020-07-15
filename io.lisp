@@ -28,8 +28,10 @@
   (etypecase input
     (vector-input
      (vector-input-index input))
+    (file-stream
+     (file-position input))
     (stream
-     (file-position input))))
+     0)))
 
 (defmethod size ((input vector-input))
   (length (vector-input-vector input)))
@@ -87,3 +89,18 @@
             value))
          (stream
           (,(intern (format NIL "~a-~a" 'read structure-type)) ,input))))))
+
+(defun call-with-io (function io &key (start 0) (if-exists :error) (direction :input))
+  (etypecase io
+    ((or string pathname)
+     (with-open-file (stream io :direction direction
+                                :element-type '(unsigned-byte 8)
+                                :if-exists if-exists)
+       (funcall function stream)))
+    (stream
+     (funcall function io))
+    (vector
+     (funcall function (make-vector-input io start)))))
+
+(defmacro with-io ((io target &rest args) &body body)
+  `(call-with-io (lambda (,io) ,@body) ,target ,@args))

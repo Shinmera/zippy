@@ -68,14 +68,33 @@
      (with-zip-file (zip file)
        (extract-zip path zip :if-exists if-exists)))))
 
+(defun ensure-zip-file (file)
+  (etypecase file
+    ((or pathname string)
+     (let ((entries (make-array 0 :adjustable T :fill-pointer T)))
+       (if (or (pathname-name file) (pathname-type file))
+           (vector-push-extend (make-instance 'zip-entry :content file) entries)
+           (dolist (path (directory (merge-pathnames (make-pathname :name :wild :type :wild :directory '(:relative :wild-inferiors))
+                                                     file)))
+             (let ((file-name (enough-namestring path file)))
+               (vector-push-extend (make-instance 'zip-entry :content path :file-name file-name) entries))))
+       (make-instance 'zip-file :entries entries :comment "Created with Zippy")))
+    ((or vector stream)
+     (let ((entries (make-array 1)))
+       (setf (aref entries 0) (make-instance 'zip-file :content file :file-name "-"))
+       (make-instance 'zip-file :entries entries :comment "Created with Zippy")))
+    (zip-file
+     file)))
+
 (defun compress-zip (file target &key (start 0) (if-exists :error) password)
-  (etypecase target
-    ((or string pathname)
-     (with-open-file (stream target :direction :output
-                                    :element-type '(unsigned-byte 8)
-                                    :if-exists if-exists)
-       (encode file stream :password password)))
-    (stream
-     (encode file target :password password))
-    (vector
-     (encode file (make-vector-input target start) :password password))))
+  (let ((file (ensure-zip-file file)))
+    (etypecase target
+      ((or string pathname)
+       (with-open-file (stream target :direction :output
+                                      :element-type '(unsigned-byte 8)
+                                      :if-exists if-exists)
+         (encode file stream :password password)))
+      (stream
+       (encode file target :password password))
+      (vector
+       (encode file (make-vector-input target start) :password password)))))
