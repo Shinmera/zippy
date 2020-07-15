@@ -6,6 +6,9 @@
 
 (in-package #:org.shirakumo.zippy)
 
+(deftype io ()
+  `(or stream vector-input))
+
 (defstruct (vector-input (:constructor make-vector-input (vector index)))
   (vector NIL :type (vector (unsigned-byte 8) *) :read-only T)
   (index 0 :type fixnum))

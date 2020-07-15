@@ -7,9 +7,9 @@
 (in-package #:org.shirakumo.zippy)
 
 (define-condition archive-file-required (error)
-  ((id :initarg :id :initform (error "ID required.")))
+  ((disk :initarg :disk :initform (error "DISK required.") :reader disk))
   (:report (lambda (c s) (format s "Disk ~a is required to continue reading the Zip file."
-                                 (slot-value c 'id)))))
+                                 (disk c)))))
 
 (defun decode-extra-fields (vector)
   (let ((fields ()))
@@ -131,7 +131,7 @@
               (eocd64-input input))
           (when (/= (end-of-central-directory-number-of-disk eocd)
                     (end-of-central-directory-locator/64-central-directory-disk eocd-locator))
-            (restart-case (error 'archive-file-required :id (end-of-central-directory-locator/64-central-directory-disk eocd-locator))
+            (restart-case (error 'archive-file-required :disk (end-of-central-directory-locator/64-central-directory-disk eocd-locator))
               (use-value (new-input)
                 (setf eocd64-input new-input))))
           (setf disks (make-array (end-of-central-directory-locator/64-number-of-disks eocd-locator) :initial-element NIL))
@@ -164,7 +164,7 @@ one."))
                  (setf (aref disks (end-of-central-directory-number-of-disk eocd)) input))
                (loop for disk from cd-start-disk to cd-end-disk
                      for input = (or (aref disks disk)
-                                     (restart-case (error 'archive-file-required :id disk)
+                                     (restart-case (error 'archive-file-required :disk disk)
                                        (use-value (new-input)
                                          (setf (aref disks disk) new-input))))
                      do (seek input cd-offset)
@@ -182,7 +182,7 @@ one."))
      (let ((streams ()))
        (handler-bind ((archive-file-required
                         (lambda (c)
-                          (let ((id (slot-value c 'id)))
+                          (let ((id (disk c)))
                             (let ((stream (open (make-pathname :type (format NIL "z~2,'0d" (1+ id)) :defaults input)
                                                 :element-type '(unsigned-byte 8))))
                               (push stream streams)
