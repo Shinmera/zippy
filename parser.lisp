@@ -32,7 +32,7 @@
   (let ((parser (or (gethash (type-of structure) *structures*)
                     (error "Don't know how to serialise a structure of type~%  ~a"
                            (type-of structure)))))
-    (funcall (fourth parser) stream)))
+    (funcall (fourth parser) structure stream)))
 
 (defun integer-binary-type (integer)
   (cond ((<= integer #xFF) 'ub8)
@@ -239,7 +239,9 @@
     (list major minor)))
 
 (defun encode-version (version compatibility)
-  (let ((idx (position compatibility *file-attribute-compatibility-map*))
+  (let ((idx (etypecase compatibility
+               (integer compatibility)
+               (keyword (file-attribute-id compatibility))))
         (int (+ (* 10 (first version)) (second version))))
     (setf (ldb (byte 8 8) int) idx)
     int))

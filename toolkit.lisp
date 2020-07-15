@@ -45,3 +45,6 @@
           for bit in bits
           do (when bit (setf (ldb (byte 1 i) int) 1)))
     int))
+
+(defun enlist (thing &rest values)
+  (if (listp thing) thing (list* thing values)))

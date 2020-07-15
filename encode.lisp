@@ -10,10 +10,9 @@
   '(4 5))
 
 (defvar *compatibility*
-  (position #+windows :ntfs
-            #+darwin :darwin
-            #+(and unix (not darwin)) :unix
-            *file-attribute-compatibility-map*))
+  #+windows :ntfs
+  #+darwin :darwin
+  #+(and unix (not darwin)) :unix)
 
 (defun entry-flags (entry)
   (bitfield (encryption-method entry)
@@ -35,7 +34,7 @@
        (setf (uncompressed-size entry) (file-length content))
        (unless (file-name entry)
          (setf (file-name entry) (file-namestring content))))
-      (pathname
+      ((or string pathname)
        (setf (last-modified entry) (file-write-date content))
        (unless (file-name entry)
          (setf (file-name entry) (file-namestring content))))
@@ -54,19 +53,53 @@
                       (first (attributes entry))
                       *compatibility*)))
 
+(defun entry-compression-id (entry)
+  (compression-method-id
+   (if (and (consp (encryption-method entry))
+            (find (first (encryption-method entry)) '(:ae-1 :ae-2)))
+       :ae-x
+       (compression-method entry))))
+
+(defun add-extra-entry (extra entry)
+  (let ((end (length extra)))
+    (setf extra (adjust-array extra (+ end (size entry))))
+    (encode-structure entry extra end)
+    extra))
+
 (defun entry-to-lf (entry)
   (multiple-value-bind (date time) (encode-msdos-timestamp (last-modified entry))
-    (let ((file-name (babel:octets-to-string (file-name entry) :encoding :utf-8))
-          (extra #()))
-      ;; Append Zip64 size info if we can.
+    (let ((file-name (babel:string-to-octets (file-name entry) :encoding :utf-8))
+          (extra (make-array 0 :adjustable T :element-type '(unsigned-byte 8))))
       (when (and (size entry) (<= #xFFFFFFFF (size entry)))
-        (setf extra (make-array 20 :element-type '(unsigned-byte 8)))
-        (nibbles::ub16set/le extra 0 #x0001)
-        (nibbles::ub16set/le extra 2 16)
-        (nibbles::ub64set/le extra 4 (uncompressed-size entry))
-        (nibbles::ub64set/le extra 12 (size entry)))
+        (add-extra-entry extra (make-zip64-extended-information
+                                28 (size entry) (uncompressed-size entry)
+                                (start entry) 0)))
+      (destructuring-bind (method bittage) (enlist (encryption-method entry))
+        (case method
+          (:ae-1
+           (add-extra-entry extra (make-aes-extra-data
+                                   7 17729 1
+                                   (ecase bittage
+                                     (128 1)
+                                     (192 2)
+                                     (256 3))
+                                   (compression-method-id (compression-method entry)))))
+          (:ae-2
+           (add-extra-entry extra (make-aes-extra-data
+                                   7 17729 2
+                                   (ecase bittage
+                                     (128 1)
+                                     (192 2)
+                                     (256 3))
+                                   (compression-method-id (compression-method entry)))))
+          (:pkware)
+          (T
+           (add-extra-entry extra (make-encryption-header
+                                   8 2 (encryption-method-id method)
+                                   bittage 1 #())))))
       (make-local-file (entry-version entry)
-                       (entry-flags entry) (compression-method entry)
+                       (entry-flags entry)
+                       (entry-compression-id entry)
                        date time (or (crc-32 entry) 0)
                        (if (size entry) (cap (size entry) 32))
                        (if (uncompressed-size entry) (cap (uncompressed-size entry) 32))
@@ -79,23 +112,21 @@
 
 (defun entry-to-cd (entry)
   (multiple-value-bind (date time) (encode-msdos-timestamp (last-modified entry))
-    (let ((file-name (babel:octets-to-string (file-name entry) :encoding :utf-8))
+    (let ((file-name (babel:string-to-octets (file-name entry) :encoding :utf-8))
           (comment (if (comment entry)
-                       (babel:octets-to-string (comment entry) :encoding :utf-8)
+                       (babel:string-to-octets (comment entry) :encoding :utf-8)
                        #()))
-          (extra #()))
+          (extra (make-array 0 :adjustable T :element-type '(unsigned-byte 8))))
       (when (or (<= #xFFFFFFFF (size entry))
                 (<= #xFFFFFFFF (start entry)))
-        (setf extra (make-array 20 :element-type '(unsigned-byte 8)))
-        (encode-structure (make-zip64-extended-information
-                           28 (size entry) (uncompressed-size entry)
-                           (start entry) 0)
-                          extra 0))
+        (add-extra-entry extra (make-zip64-extended-information
+                                28 (size entry) (uncompressed-size entry)
+                                (start entry) 0)))
       (make-central-directory-entry
        (entry-version entry)
        (entry-version entry)
        (entry-flags entry)
-       (compression-method entry)
+       (entry-compression-id entry)
        date time (or (crc-32 entry) 0)
        (if (size entry) (cap (size entry) 32))
        (if (uncompressed-size entry) (cap (uncompressed-size entry) 32))
@@ -138,10 +169,11 @@
         do (setf (start entry) (index output))
            (backfill-from-content entry)
            (write-structure* (entry-to-lf entry) output)
+           ;; TODO: Decryption header and all that guff
            (encode-entry-payload entry output password)
            (write-structure* (entry-to-dd entry) output)
            ;; FIXME: If writing to a file-stream or vector, backtrack and
-           ;;        Fixup the LF entry with new info
+           ;;        Fixup the LF entry with size/crc/flag
         )
   (let ((cd-start (index output)))
     (loop for entry across (entries zip-file)

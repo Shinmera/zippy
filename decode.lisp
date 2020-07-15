@@ -37,7 +37,7 @@
      (setf (disk entry) (zip64-extended-information-starting-disk field)))
     (encryption-header
      (setf (encryption-method entry)
-           (list (gethash (encryption-header-encryption-algorithm field) *encryption-method-map*)
+           (list (encryption-method-name (encryption-header-encryption-algorithm field))
                  :bit-length (encryption-header-bit-length field))))
     (aes-extra-data
      (setf (encryption-method entry) (list (ecase (aes-extra-data-version field)
@@ -47,7 +47,7 @@
                                                          (1 128)
                                                          (2 192)
                                                          (3 256))))
-     (setf (compression-method entry) (aref *compression-method-map* (aes-extra-data-compression-method field))))))
+     (setf (compression-method entry) (compression-method-name (aes-extra-data-compression-method field))))))
 
 (defun lf-to-entry (lf entry)
   (macrolet ((maybe-set (field value)
@@ -64,7 +64,7 @@
                 (= #xFFFFFFFF (local-file-compressed-size lf)))
       (maybe-set size (local-file-compressed-size lf))
       (maybe-set uncompressed-size (local-file-uncompressed-size lf)))
-    (maybe-set compression-method (aref *compression-method-map* (local-file-compression-method lf)))
+    (maybe-set compression-method (compression-method-name (local-file-compression-method lf)))
     (maybe-set encryption-method (cond ((logbitp 6 (local-file-flags lf)) '(:unknown))
                                        ((logbitp 0 (local-file-flags lf)) '(:pkware))))
     (maybe-set file-name (decode-string (local-file-file-name lf) (local-file-flags lf)))
@@ -74,8 +74,7 @@
 
 (defun cde-to-entry (cde entry)
   (setf (version entry) (decode-version (central-directory-entry-version-needed cde)))
-  (setf (attributes entry) (list (aref *file-attribute-compatibility-map*
-                                       (ldb (byte 8 8) (central-directory-entry-version-made cde)))
+  (setf (attributes entry) (list (file-attribute-name (ldb (byte 8 8) (central-directory-entry-version-made cde)))
                                  (central-directory-entry-external-file-attributes cde)))
   (setf (crc-32 entry) (central-directory-entry-crc-32 cde))
   (setf (size entry) (central-directory-entry-compressed-size cde))
@@ -84,7 +83,7 @@
   (setf (disk entry) (central-directory-entry-disk-number-start cde))
   (setf (last-modified entry) (decode-msdos-timestamp (central-directory-entry-last-modified-date cde)
                                                       (central-directory-entry-last-modified-time cde)))
-  (setf (compression-method entry) (aref *compression-method-map* (central-directory-entry-compression-method cde)))
+  (setf (compression-method entry) (compression-method-name (central-directory-entry-compression-method cde)))
   (setf (encryption-method entry) (cond ((logbitp 6 (central-directory-entry-flags cde)) :strong)
                                         ((logbitp 0 (central-directory-entry-flags cde)) :pkware)))
   (setf (comment entry) (decode-string (central-directory-entry-file-comment cde)

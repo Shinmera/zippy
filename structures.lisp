@@ -86,6 +86,22 @@ Author: Nicolas Hafner <shinmera@tymoon.eu>
   (file-comment-length ub16)
   (file-comment ub8 file-comment-length))
 
+(define-byte-structure decryption-header
+  (iv-size ub16)
+  (iv ub8 iv-size)
+  (size ub32)
+  (format ub16)
+  (encryption-algorithm ub16)
+  (bit-length ub16)
+  (flags ub16)
+  (random-data-size ub16)
+  (random-data ub8 random-data-size)
+  (reserved-size ub32)
+  (reserved ub8 reserved-size)
+  (validation-size ub16)
+  (validation ub8 validation-size)
+  (crc ub32))
+
 ;;; Extensible data fields
 (define-byte-structure (zip64-extended-information #x00001)
   (size ub16)
@@ -146,7 +162,7 @@ Author: Nicolas Hafner <shinmera@tymoon.eu>
   (encryption-algorithm ub16)
   (bit-length ub16)
   (flags ub16)
-  (certificate-size ub8 (- size 8)))
+  (certificate ub8 (- size 8)))
 
 (define-byte-structure (record-management-controls #x0018)
   (size ub16)

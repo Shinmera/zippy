@@ -28,6 +28,15 @@
                   (18 . :os/400)
                   (19 . :darwin))))
 
+(defun file-attribute-name (id)
+  (if (<= 0 id (1- (length *file-attribute-compatibility-map*)))
+      (aref *file-attribute-compatibility-map* id)
+      (error "Unknown file attribute ~a" id)))
+
+(defun file-attribute-id (name)
+  (or (position name *file-attribute-compatibility-map*)
+      (error "Unknown file attribute ~a" name)))
+
 (defparameter *compression-method-map*
   (alist-vector '((0 . NIL)
                   (1 . :shrink)
@@ -55,6 +64,15 @@
                   (98 . :ppmd)
                   (99 . :ae-x))))
 
+(defun compression-method-name (id)
+  (if (<= 0 id (1- (length *compression-method-map*)))
+      (aref *compression-method-map* id)
+      (error "Unknown compression method ~a" id)))
+
+(defun compression-method-id (name)
+  (or (position name *compression-method-map*)
+      (error "Unknown compression method ~a" name)))
+
 (defparameter *encryption-method-map*
   (alist-table '((#x6601 . :des)
                  (#x6602 . :rc2)
@@ -68,3 +86,13 @@
                  (#x6721 . :twofish)
                  (#x6801 . :rc4)
                  (#xffff . :unknown))))
+
+(defun encryption-method-name (id)
+  (or (gethash id *encryption-method-map*)
+      (error "Unknown encryption method ~d" id)))
+
+(defun encryption-method-id (name)
+  (loop for id being the hash-keys of *encryption-method-map*
+        for val being the hash-values of *encryption-method-map*
+        do (when (eql name val) (return id))
+        finally (error "Unknown encryption method ~d" name)))
