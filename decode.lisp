@@ -102,7 +102,7 @@
                      (< i (length entries))))
     i))
 
-(defun decode (input)
+(defun decode-file (input)
   (let (entries disks)
     ;; First seek to end of file, then backtrack to find the end-of-central-directory signature.
     ;; We skip the bytes that are guaranteed to be part of the structure anyway. Thus, if the
@@ -186,14 +186,15 @@ one."))
                               (use-value stream))))))
          (with-open-file (stream input :element-type '(unsigned-byte 8))
            (unwind-protect
-                (let ((file (decode stream)))
+                (let ((file (decode-file stream)))
                   (funcall function file))
              (mapc #'close streams))))))
     (stream
-     (funcall function (decode input)))
-    (vector
-     (funcall function (decode (make-vector-input input start))))))
+     (funcall function (decode-file input)))
+    ((vector (unsigned-byte 8))
+     (funcall function (decode-file (make-vector-input input start))))))
 
+;; FIXME: Allow supplying an END to the octet-vector, too.
 (defmacro with-zip-file ((file input &key (start 0)) &body body)
   `(call-with-input-zip-file (lambda (,file) ,@body) ,input :start ,start))
 

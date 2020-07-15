@@ -18,6 +18,7 @@
   (:export
    #:archive-file-required
    #:disk
+   #:decode-file
    #:with-zip-file
    #:decode-entry)
   ;; encode.lisp
