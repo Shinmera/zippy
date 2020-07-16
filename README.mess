@@ -43,7 +43,7 @@ The source zip does not have to be a path to a file on disk, but may also be an 
 
 You can look at the raw payload of a ``zip-entry`` by using ``decode-entry``. All of the other metadata is stored directly in the entry and does not require decoding.
 
-For greater control when constructing a zip file, you can manually create ``ip-entry`` instances yourself and pass the final ``zip-file`` instance to ``compress-zip``.
+For greater control when constructing a zip file, you can manually create ``zip-entry`` instances yourself and pass the final ``zip-file`` instance to ``compress-zip``.
 
 ## Split Zip Files
 When reading a split zip file from disk, Zippy will take care of accessing the other zip parts automatically. However, when decoding from an octet vector, Zippy has no way of guessing where to get the rest of the data from and will signal an error of type ``archive-file-required`` with the requested ``disk`` id. You should then invoke the ``use-value`` restart with a suitable ``io`` instance to continue the decoding.
