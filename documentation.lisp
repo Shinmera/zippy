@@ -147,7 +147,29 @@ See ARCHIVE-FILE-REQUIRED"))
     "The max zip file version supported by this library.")
   
   (function *compatibility*
-    "The default file attribute compatibility flag."))
+    "The default file attribute compatibility flag.")
+
+  (function encode-file
+    "Encodes the given zip-file to the output IO.
+
+This currently does not support split archive creation. All the
+entries will be written to the output.
+
+This will cause the ZIP-ENTRIES in the ZIP-FILE to be modified.
+In particular, SIZE, CRC-32, and UNCOMPRESSED-SIZE will be set, and
+LAST-MODIFIED, FILE-NAME, ATTRIBUTES, and COMPRESSION-METHOD may be
+set.
+
+The created Zip file will include Zip64 metadata regardless of whether
+this is required, but it will only enforce Zip64 decoding if the
+number of entries, or the size of an entry exceeds the possible bounds
+of traditional 32-bit zip files.
+
+If an encryption-method is specified for any entry, PASSWORD must be
+passed and will be used to encrypt the file.
+
+See ZIP-FILE
+See ZIP-ENTRY"))
 
 ;; encryption.lisp
 (docs:define-docs
@@ -213,228 +235,524 @@ See MAKE-ENCRYPTION-STATE"))
 ;; io.lisp
 (docs:define-docs
   (type io
-    "")
+    "Type for objects that Zippy can decode from or encode to.
+
+Decoding can only happen from an input with a fixed end and the
+ability to seek -- in effect file-streams and vectors.
+
+Encoding can happen to any stream and vector.
+
+See CL:STREAM
+See CL:FILE-STREAM
+See VECTOR-INPUT
+See SEEK
+See HAS-MORE
+See INDEX
+See START
+See END
+See SIZE
+See UB32
+See OUTPUT
+See PARSE-STRUCTURE*
+See WRITE-STRUCTURE*
+See PARSE-STRUCTURE
+See WITH-IO")
   
   (type vector-input
-    "")
+    "Representation of vector input/output state.
+
+See VECTOR-INPUT-VECTOR
+See VECTOR-INPUT-INDEX
+See VECTOR-INPUT-START
+See VECTOR-INPUT-END")
   
   (function vector-input-vector
-    "")
+    "Returns the vector the vector-input is backing.
+
+See VECTOR-INPUT")
   
   (function vector-input-index
-    "")
+    "Accesses the current index into the vector.
+
+See VECTOR-INPUT")
+
+  (function vector-input-start
+    "Returns the starting index of the vector.
+
+See VECTOR-INPUT")
+
+  (function vector-input-end
+    "Returns the ending index of the vector.
+
+See VECTOR-INPUT")
   
   (function seek
-    "")
+    "Seek the io to the requested index.
+
+If the index is outside the allowed ranges, an error is signalled.
+
+See IO")
   
   (function has-more
-    "")
+    "Returns whether the io has input left to read, or space left to write to.
+
+See IO")
   
   (function index
-    "")
+    "Returns the current index into the IO.
+
+This should always be in the range of [START, END].
+
+See IO")
+
+  (function start
+    "Returns the starting index of the IO.
+
+See IO")
+
+  (function end
+    "Returns the ending index of the IO.
+
+See IO")
   
   (function size
-    "")
+    "Returns the size of the object in octets.
+
+For zip-entries this is the number of octets in compressed format as
+they are in the archive.
+
+See ZIP-ENTRY
+See IO")
   
   (function ub32
-    "")
+    "Reads a 32 bit unsigned integer from the IO and returns it.
+
+This will advance the IO index.
+
+See IO")
   
   (function output
-    "")
+    "Writes the given array of octets to the IO.
+
+If the IO does not have sufficient space available, an error is
+signalled.
+
+See IO")
   
   (function parse-structure*
-    "")
+    "Parses a structure from the IO assuming a leading 32 bit signature.
+
+If no suitable structure can be found, an error is
+signalled. Otherwise, the parsed structure instance is returned.
+
+This advances the IO index.
+
+See IO")
   
   (function write-structure*
-    "")
+    "Writes the given structure to the IO.
+
+This advances the IO index.
+
+See IO")
   
   (function parse-structure
-    "")
+    "Parse the given structure type from the IO.
+
+This advances the IO index.
+
+See IO")
   
   (function with-io
-    ""))
+    "Wraps TARGET in an appropriate IO context.
+
+TARGET may be a string or pathname, a stream, or a vector. In the case
+of a pathname or string, IF-EXISTS and DIRECTION can be passed as
+arguments for OPEN. In the case off a vector, START and END may be
+passed to designate a sub-range of the vector.
+
+See IO"))
 
 ;; parser.lisp
 (docs:define-docs
   (function decode-structure
-    "")
+    "Decodes a structure from the given vector at the given starting position.
+
+A signature is expected at the input position. If no signature
+is available, or if it is not recognised, an error is signalled.
+
+Returns the structure instance and the ending index.")
   
   (function read-structure
-    "")
+    "Decodes a structure from the given stream.
+
+A signature is expected at the input position. If no signature
+is available, or if it is not recognised, an error is signalled. 
+Returns the structure instance otherwise.")
   
   (function encode-structure
-    "")
+    "Encodes the given structure to the vector at the given starting position.
+
+This will encode it including its signature, if any.
+
+Returns the ending index.")
   
   (function write-structure
-    "")
+    "Encodes the given structure to the stream.
+
+This will encode it including its signature, if any.")
   
   (function define-byte-structure
-    ""))
+    "Define a new byte-coded structure.
+
+NAME can either be the name of the structure, or a list of the name
+and the signature that identifies the record uniquely. If a signature
+is given, the structure is registered and can be used with the
+standard functions DECODE/READ/ENCODE/WRITE-STRUCTURE.
+
+Each RECORD must be a list matching
+
+  (NAME TYPE &optional COUNT)
+
+Where NAME identifies the field, TYPE identifies the name field's bit
+type, and COUNT the number of expected entries for a variable sized
+record. If COUNT is specified, it may be an arbitrary expression that
+can reference earlier record values by name, and the resulting slot
+value will be an octet vector of that length.
+
+The special record name SIZE may be used to identify a field that
+identifies the maximal size of the remaining structure payload. Any
+structure fields that would come after the dynamically read size has
+run out will be initialised to NIL.
+
+TYPE may be one of ub8 ub16 ub32 ub64
+
+This will generate a structure of NAME with the given records as
+slots, as well as four functions to encode and decode the
+structure, and one function to construct it. These functions are
+constructed according to the following schema:
+
+  (MAKE/DECODE/READ/ENCODE/WRITE)-NAME
+
+The given function names are interned in the current package.
+
+See DECODE-STRUCTURE
+See READ-STRUCTURE
+See ENCODE-STRUCTURE
+See WRITE-STRUCTURE"))
 
 ;; structures.lisp
-(docs:define-docs
-  (type zip64-extended-information
-    "")
-  
-  (type os/2
-    "")
-  
-  (type ntfs
-    "")
-  
-  (type openvms
-    "")
-  
-  (type unix
-    "")
-  
-  (type patch-descriptor
-    "")
-  
-  (type pkcs7-store
-    "")
-  
-  (type x509-file
-    "")
-  
-  (type x509-central-directory
-    "")
-  
-  (type encryption-header
-    "")
-  
-  (type record-management-controls
-    "")
-  
-  (type pkcs7-encryption-recipient-certificate-list
-    "")
-  
-  (type mvs
-    "")
-  
-  (type policy-decryption-key-record
-    "")
-  
-  (type key-provider-record
-    "")
-  
-  (type policy-key-data-record
-    "")
-  
-  (type zipit-macintosh-long
-    "")
-  
-  (type zipit-macintosh-short-file
-    "")
-  
-  (type zipit-macintosh-short-dir
-    "")
-  
-  (type infozip-unicode-comment
-    "")
-  
-  (type infozip-unicode-path
-    "")
-  
-  (type data-stream-alignment
-    "")
-  
-  (type microsoft-open-packaging-growth-hint
-    "")
-  
-  (type aes-extra-data
-    ""))
+(docs:define-docs)
 
 ;; tables.lisp
 (docs:define-docs
   (function file-attribute-name
-    "")
+    "Returns the file attribute name for the given ID.
+
+The name should be one of
+  :ms-dos
+  :amiga
+  :open-vms
+  :unix
+  :vm/cms
+  :atari-st
+  :os/2
+  :macintosh
+  :z-system
+  :cp/m
+  :ntfs
+  :mvs
+  :vse
+  :acorn-risc
+  :vfat
+  :alternate-mvs
+  :beos
+  :tandem
+  :os/400
+  :darwin
+
+If the ID is not known, an error is signalled.")
   
   (function file-attribute-id
-    "")
+    "Returns the file attribute ID for the given name.
+
+If The name is not known, an error is signalled.")
   
   (function compression-method-name
-    "")
+    "Returns the compression method name for the given ID.
+
+The name should be one of
+  NIL
+  :shrink
+  :reduce-1
+  :reduce-2
+  :reduce-3
+  :reduce-4
+  :implode
+  :tokenizing
+  :deflate
+  :deflate64
+  :pkware-implode
+  :reserved
+  :bzip2
+  :reserved
+  :lzma
+  :reserved
+  :cmpsc
+  :reserved
+  :terse
+  :lz77
+  :zstd
+  :jpeg
+  :wavpack
+  :ppmd
+  :ae-x
+
+If the ID is not known, an error is signalled.")
   
   (function compression-method-id
-    "")
+    "Returns the compression method ID for the given name.
+
+If The name is not known, an error is signalled.")
   
   (function encryption-method-name
-    "")
+    "Returns the encryption method name for the given ID.
+
+The name should be one of
+  :des
+  :rc2
+  :3des-168
+  :3des-112
+  :aes-128 
+  :aes-192 
+  :aes-256 
+  :rc2
+  :blowfish
+  :twofish
+  :rc4
+  :unknown
+
+If the ID is not known, an error is signalled.")
   
   (function encryption-method-id
-    ""))
+    "Returns the encryption method ID for the given name.
+
+If The name is not known, an error is signalled."))
 
 ;; zippy.lisp
 (docs:define-docs
   (type zip-file
-    "")
+    "Representation of a full zip archive.
+
+In order to ensure that all potentially open streams that the zip-file
+may hold are closed, call CL:CLOSE.
+
+See ENTRIES
+See DISKS
+See COMMENT
+See DECODE-FILE
+See CL:CLOSE")
   
   (function entries
-    "")
+    "Accessor to the vector of zip-entry instances for the zip-file.
+
+See ZIP-FILE
+See ZIP-ENTRY")
   
   (function disks
-    "")
+    "Accessor to the vector of IO instances representing the zip-file's disks.
+
+This vector is managed automatically.
+
+See ZIP-FILE
+See IO")
   
   (function comment
-    "")
+    "Accessor to the comment of the zip-file or entry.
+
+See ZIP-FILE
+See ZIP-ENTRY")
   
   (type zip-entry
-    "")
+    "Representation of a file entry in a zip archive.
+
+Unless you are constructing an archive, this does /not/ contain the
+actual entry data payload.
+
+See ZIP-FILE
+See CRC-32
+See DISK
+See OFFSET
+see SIZE
+See UNCOMPRESSED-SIZE
+See EXTRA-FIELDS
+See VERSION
+See ATTRIBUTES
+See ENCRYPTION-METHOD
+See COMPRESSION-METHOD
+See LAST-MODIFIED
+See FILE-NAME
+See COMMENT
+See CONTENT")
   
   (function zip-file
-    "")
+    "Returns the zip-file instance this entry is a part of.
+
+See ZIP-ENTRY
+See ZIP-FILE")
   
   (function version
-    "")
+    "Returns the Zip file version needed to extract this entry.
+
+The version is a list of two integers.
+
+This slot should not be set by the user.
+
+See ZIP-ENTRY")
   
   (function attributes
-    "")
+    "Accesses the file attributes.
+
+This should be a list of two entries, the file attribute compatibility
+identifier, and the actual attributes encoded as an integer.
+
+For ZIP-ENTRIES that are backed by a file, this entry is computed
+automatically when the entry is encoded.
+
+See FILE-ATTRIBUTE-NAME
+See ZIP-ENTRY
+See ORG.SHIRAKUMO.FILE-ATTRIBUTES:PERMISSIONS")
   
   (function encryption-method
-    "")
+    "Accesses the encryption method used to encrypt the file contents.
+
+This should either be NIL, a keyword, or a list of a keyword and extra
+parameters. The keyword identifies the name of the encryption method.
+Additionally to the names listed in ENCRYPTION-METHOD-NAME, the names
+:AE-1 and :AE-2 are allowed.
+
+See ENCRYPTION-METHOD-NAME
+See ZIP-ENTRY")
   
   (function compression-method
-    "")
+    "Accesses the compression method used to compress the file
+    contents.
+
+This should either be NIL or a keyword naming the compression method.
+
+See COMPRESSION-METHOD-NAME
+See ZIP-ENTRY")
   
   (function crc-32
-    "")
+    "Accesses the CRC-32 checksum of the file contents.
+
+This is computed and set automatically when the entry is encoded.
+
+See ZIP-ENTRY")
   
   (function disk
-    "")
+    "Accesses the disk ID on which the contents of this file start.
+
+This slot should not be set by the user.
+
+See OFFSET
+See ZIP-ENTRY")
   
-  (function start
-    "")
+  (function offset
+    "Accesses the octet index at which the contents of this file start
+    on its disk.
+
+This slot should not be set by the user.
+
+See DISK
+See ZIP-ENTRY")
   
   (function uncompressed-size
-    "")
+    "Accesses the octet size of the entry's uncompressed data payload.
+
+If unset, this slot is automatically computed when the entry is
+encoded.
+
+See ZIP-ENTRY")
   
   (function extra-fields
-    "")
+    "Accesses the list of extra data structures for the entry.
+
+This slot should not be set by the user.
+
+See ZIP-ENTRY")
   
   (function last-modified
-    "")
+    "Accesses the universal time designating the last time the entry's contents were modified.
+
+If unset, and the entry is backed by a file, this slot is
+automatically computed when the entry is encoded.
+
+See ZIP-ENTRY")
   
   (function file-name
-    "")
-  
-  (function comment
-    "")
+    "Accesses the relative path designating where the file belongs on a hirearchical file system.
+
+When the entry is encoded and this slot is unset, it may be computed
+automatically if the entry is backed by a file. Otherwise, an error is
+signalled.
+
+The path must be relative, and must use forward slashes as the
+directory separator.
+
+See ZIP-ENTRY")
   
   (function content
-    "")
+    "Accesses the backing content of the file.
+
+This slot must be set by the user to a suitable source for the file's
+contents. It may be either a string or pathname to designate a file
+from disk, an octet input-stream, an octet vector, or an IO instance.
+
+See IO
+See ZIP-ENTRY")
   
   (function entry-to-file
-    "")
+    "Decodes the contents of the entry to the given path.
+
+This will attempt to restore the same file attributes as are contained
+in the entry's metadata, unless :RESTORE-ATTRIBUTES NIL is passed.
+
+See DECODE-ENTRY
+See CL:OPEN
+See ZIP-ENTRY")
 
   (function entry-to-stream
-    "")
+    "Decodes the contents of the entry to the given octet input-stream.
+
+See DECODE-ENTRY
+See ZIP-ENTRY")
 
   (function entry-to-vector
-    "")
+    "Decodes the contents of the entry to an octet vector.
+
+If an octet vector is passed explicitly through :VECTOR, the vector
+must be at least START+(UNCOMPRESSED-SIZE ENTRY) big.
+
+See DECODE-ENTRY
+See ZIP-ENTRY")
   
   (function extract-zip
-    "")
+    "Extracts the contents of the zip file to the given directory.
+
+FILE may either be a ZIP-FILE, or a suitable input for WITH-ZIP-FILE.
+PATH should be a directory pathname designator.
+
+See ZIP-FILE
+See ENTRY-TO-FILE
+See WITH-ZIP-FILE")
   
   (function compress-zip
-    ""))
+    "Compresses the contents of the zip file to the given output.
+
+FILE should be a ZIP-FILE.
+TARGET should be a suitable target for WITH-IO.
+
+See WITH-IO
+See ENCODE-FILE
+See ZIP-FILE"))

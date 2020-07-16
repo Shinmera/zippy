@@ -46,48 +46,42 @@
     (ub8 1)
     (ub16 2)
     (ub32 4)
-    (ub64 8)
-    (character 1)))
+    (ub64 8)))
 
 (defun binary-type-type (type)
   (ecase type
     (ub8 '(unsigned-byte 8))
     (ub16 '(unsigned-byte 16))
     (ub32 '(unsigned-byte 32))
-    (ub64 '(unsigned-byte 64))
-    (character '(unsigned-byte 8))))
+    (ub64 '(unsigned-byte 64))))
 
 (defun binary-type-decoder (type)
   (ecase type
     (ub8 'aref)
     (ub16 'nibbles:ub16ref/le)
     (ub32 'nibbles:ub32ref/le)
-    (ub64 'nibbles:ub64ref/le)
-    (character 'aref)))
+    (ub64 'nibbles:ub64ref/le)))
 
 (defun binary-type-reader (type)
   (ecase type
     (ub8 'read-byte)
     (ub16 'nibbles:read-ub16/le)
     (ub32 'nibbles:read-ub32/le)
-    (ub64 'nibbles:read-ub64/le)
-    (character 'read-byte)))
+    (ub64 'nibbles:read-ub64/le)))
 
 (defun binary-type-encoder (type)
   (ecase type
     (ub8 'aref)
     (ub16 'nibbles::ub16set/le)
     (ub32 'nibbles::ub32set/le)
-    (ub64 'nibbles::ub64set/le)
-    (character 'aref)))
+    (ub64 'nibbles::ub64set/le)))
 
 (defun binary-type-writer (type)
   (ecase type
     (ub8 'write-byte)
     (ub16 'nibbles:write-ub16/le)
     (ub32 'nibbles:write-ub32/le)
-    (ub64 'nibbles:write-ub64/le)
-    (character 'write-byte)))
+    (ub64 'nibbles:write-ub64/le)))
 
 (defun generate-record-decoder (record vector index)
   (destructuring-bind (name type &optional count) record

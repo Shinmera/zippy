@@ -9,101 +9,121 @@
 (deftype io ()
   `(or stream vector-input))
 
-(defstruct (vector-input (:constructor make-vector-input (vector index)))
-  (vector NIL :type (vector (unsigned-byte 8) *) :read-only T)
+(defstruct (vector-input (:constructor make-vector-input (vector index start end)))
+  (vector NIL :type (simple-array (unsigned-byte 8) *) :read-only T)
+  (start 0 :type fixnum :read-only T)
+  (end 0 :type fixnum :read-only T)
   (index 0 :type fixnum))
 
-(defun seek (input target)
-  (etypecase input
+(defun seek (io target)
+  (etypecase io
     (vector-input
-     (setf (vector-input-index input) target))
+     (if (<= (vector-input-start io) target (1- (vector-input-end io)))
+         (setf (vector-input-index io) target)
+         (error "Cannot seek outside allowed vector range.")))
     (stream
-     (file-position input target))))
+     (file-position io target))))
 
-(defun has-more (input)
-  (etypecase input
+(defun has-more (io)
+  (etypecase io
     (vector-input
-     (< (vector-input-index input) (length (vector-input-vector input))))
+     (< (vector-input-index io) (vector-input-end io)))
     (stream
-     (< (file-position input) (file-length input)))))
+     (< (file-position io) (file-length io)))))
 
-(defun index (input)
-  (etypecase input
+(defun index (io)
+  (etypecase io
     (vector-input
-     (vector-input-index input))
+     (vector-input-index io))
     (file-stream
-     (file-position input))
+     (file-position io))
     (stream
      0)))
 
-(defmethod size ((input vector-input))
-  (length (vector-input-vector input)))
-
-(defmethod size ((input stream))
-  (file-length input))
-
-(defun ub32 (input)
-  (etypecase input
+(defun start (io)
+  (etypecase io
     (vector-input
-     (prog1 (nibbles:ub32ref/le (vector-input-vector input) (vector-input-index input))
-       (incf (vector-input-index input) 4)))
+     (vector-input-start io))
     (stream
-     (nibbles:read-ub32/le input))))
+     0)))
 
-(defun output (output array start end)
-  (etypecase output
+(defun end (io)
+  (etypecase io
     (vector-input
-     (loop with vector = (vector-input-vector output)
+     (vector-input-end io))
+    (stream
+     (file-length io))))
+
+(defmethod size ((io vector-input))
+  (- (vector-input-end io) (vector-input-start io)))
+
+(defmethod size ((io stream))
+  (file-length io))
+
+(defun ub32 (io)
+  (etypecase io
+    (vector-input
+     (prog1 (nibbles:ub32ref/le (vector-input-vector io) (vector-input-index io))
+       (incf (vector-input-index io) 4)))
+    (stream
+     (nibbles:read-ub32/le io))))
+
+(defun output (io array start end)
+  (etypecase io
+    (vector-input
+     (when (<= (vector-input-end io) (+ (vector-input-index io) (- end start)))
+       (error "Output too long for target vector."))
+     (loop with vector = (vector-input-vector io)
            for i from start below end
-           for j from (vector-input-index output)
+           for j from (vector-input-index io)
            do (setf (aref vector j) (aref array i)))
-     (incf (vector-input-index output) (- end start)))
+     (incf (vector-input-index io) (- end start)))
     (stream
-     (write-sequence array output :start start :end end))))
+     (write-sequence array io :start start :end end))))
 
-(defun parse-structure* (input)
-  (etypecase input
+(defun parse-structure* (io)
+  (etypecase io
     (vector-input
      (multiple-value-bind (value index)
-         (decode-structure (vector-input-vector input) (vector-input-index input))
-       (setf (vector-input-index input) index)
+         (decode-structure (vector-input-vector io) (vector-input-index io))
+       (setf (vector-input-index io) index)
        value))
     (stream
-     (read-structure input))))
+     (read-structure io))))
 
-(defun write-structure* (structure input)
-  (etypecase input
+(defun write-structure* (structure io)
+  (etypecase io
     (vector-input
-     (setf (vector-input-index input)
-           (encode-structure structure (vector-input-vector input) (vector-input-index input))))
+     (setf (vector-input-index io)
+           (encode-structure structure (vector-input-vector io) (vector-input-index io))))
     (stream
-     (write-structure structure input)))
-  input)
+     (write-structure structure io)))
+  io)
 
-(defmacro parse-structure (structure-type input-var)
-  (let ((input (gensym "INPUT")))
-    `(let ((,input ,input-var))
-       (etypecase ,input
+(defmacro parse-structure (structure-type io-var)
+  (let ((io (gensym "IO")))
+    `(let ((,io ,io-var))
+       (etypecase ,io
          (vector-input
           (multiple-value-bind (value index)
               (,(intern (format NIL "~a-~a" 'decode structure-type))
-               (vector-input-vector ,input) (vector-input-index ,input))
-            (setf (vector-input-index ,input) index)
+               (vector-input-vector ,io) (vector-input-index ,io))
+            (setf (vector-input-index ,io) index)
             value))
          (stream
-          (,(intern (format NIL "~a-~a" 'read structure-type)) ,input))))))
+          (,(intern (format NIL "~a-~a" 'read structure-type)) ,io))))))
 
-(defun call-with-io (function io &key (start 0) (if-exists :error) (direction :input))
+(defun call-with-io (function io &key (start 0) end (if-exists :error) (direction :input))
   (etypecase io
     ((or string pathname)
      (with-open-file (stream io :direction direction
                                 :element-type '(unsigned-byte 8)
                                 :if-exists if-exists)
        (funcall function stream)))
-    (stream
+    (io
      (funcall function io))
     (vector
-     (funcall function (make-vector-input io start)))))
+     (funcall function (make-vector-input io start start (or end (length io)))))))
 
 (defmacro with-io ((io target &rest args) &body body)
   `(call-with-io (lambda (,io) ,@body) ,target ,@args))

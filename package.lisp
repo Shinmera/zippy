@@ -24,7 +24,8 @@
   ;; encode.lisp
   (:export
    #:*version*
-   #:*compatibility*)
+   #:*compatibility*
+   #:encode-file)
   ;; encryption.lisp
   (:export
    #:make-decryption-state
@@ -37,10 +38,14 @@
    #:vector-input
    #:vector-input-vector
    #:vector-input-index
+   #:vector-input-start
+   #:vector-input-end
    #:seek
    #:has-more
    #:index
    #:size
+   #:start
+   #:end
    #:ub32
    #:output
    #:parse-structure*
@@ -104,7 +109,7 @@
    #:compression-method
    #:crc-32
    #:disk
-   #:start
+   #:offset
    #:size
    #:uncompressed-size
    #:extra-fields

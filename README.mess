@@ -47,3 +47,13 @@ For greater control when constructing a zip file, you can manually create ``ip-e
 
 ## Split Zip Files
 When reading a split zip file from disk, Zippy will take care of accessing the other zip parts automatically. However, when decoding from an octet vector, Zippy has no way of guessing where to get the rest of the data from and will signal an error of type ``archive-file-required`` with the requested ``disk`` id. You should then invoke the ``use-value`` restart with a suitable ``io`` instance to continue the decoding.
+
+## Unsupported Features
+The following features remain unsupported at the moment:
+
+- Encrypted or compressed central directory
+- PKWARE-style strong encryption
+- Compression methods other than deflate
+- Handling of additional metadata in third-party extra structures
+
+With the exception of the central directory encryption however, the architecture is designed in such a way that additional encryption and compression algorithms can be added in a pluggable and easy way at a later point. See ``make-decompression-state``, ``make-compression-state``, ``make-decryption-state``, ``make-encryption-state``.

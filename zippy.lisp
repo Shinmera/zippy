@@ -30,16 +30,16 @@
 
 (defclass zip-entry ()
   ((zip-file :initform NIL :accessor zip-file)
-   (version :initform NIL :accessor version)
-   (attributes :initform NIL :accessor attributes)
-   (encryption-method :initform NIL :accessor encryption-method)
-   (compression-method :initform NIL :accessor compression-method)
    (crc-32 :initform NIL :accessor crc-32)
    (disk :initform NIL :accessor disk)
-   (start :initform NIL :accessor start)
+   (offset :initform NIL :accessor offset)
    (size :initform NIL :accessor size)
    (uncompressed-size :initform NIL :accessor uncompressed-size)
    (extra-fields :initform NIL :accessor extra-fields)
+   (version :initform NIL :initarg :version :accessor version)
+   (attributes :initform NIL :initarg :attributes :accessor attributes)
+   (encryption-method :initform NIL :initarg :encryption-method :accessor encryption-method)
+   (compression-method :initform NIL :initarg :compression-method :accessor compression-method)
    (last-modified :initform (get-universal-time) :initarg :last-modified :accessor last-modified)
    (file-name :initform NIL :initarg :file-name :accessor file-name)
    (comment :initform NIL :initarg :comment :accessor comment)
@@ -49,39 +49,43 @@
   (print-unreadable-object (entry stream :type T)
     (format stream "~s" (file-name entry))))
 
-(defun entry-to-file (path entry &key (if-exists :error) password)
+(defun entry-to-file (path entry &key (if-exists :error) password (restore-attributes T))
   (with-open-file (stream path :direction :output
                                :element-type '(unsigned-byte 8)
                                :if-exists if-exists)
     (flet ((output (buffer start end)
              (write-sequence buffer stream :start start :end end)))
       (decode-entry #'output entry :password password)))
-  ;; TODO: restore other extended attributes from the extra block (uid/gid/etc)
-  (setf (file-attributes:permissions path) (second (attributes entry))))
+  (when restore-attributes
+    ;; TODO: restore other extended attributes from the extra block (uid/gid/etc)
+    (setf (file-attributes:permissions path) (second (attributes entry)))))
 
 (defun entry-to-stream (stream entry &key password)
   (flet ((output (buffer start end)
            (write-sequence buffer stream :start start :end end)))
     (decode-entry #'output entry :password password)))
 
-(defun entry-to-vector (entry &key vector password)
+(defun entry-to-vector (entry &key vector (start 0) password)
   (let ((vector (etypecase vector
                   ((vector (unsigned-byte 8)) vector)
                   (null (make-array (uncompressed-size entry) :element-type '(unsigned-byte 8)))))
-        (i 0))
-    (flet ((output (buffer start end)
+        (i start))
+    (flet ((fast-copy (buffer start end)
              #+sbcl
              (sb-sys:with-pinned-objects (vector buffer)
                (let ((vector (sb-sys:vector-sap vector))
                      (buffer (sb-sys:vector-sap buffer)))
                  (sb-alien:alien-funcall (sb-alien:extern-alien "memcpy" (function sb-alien:void sb-sys:system-area-pointer sb-sys:system-area-pointer sb-alien:size-t))
                                          (sb-sys:sap+ vector i) (sb-sys:sap+ buffer start) (- end start))
-                 (incf i (- end start))))
-             #-sbcl
+                 (incf i (- end start)))))
+           (slow-copy (buffer start end)
              (loop for j from start below end
                    do (setf (aref vector i) (aref buffer j))
                       (incf i))))
-      (decode-entry #'output entry :password password)
+      (if #+sbcl (typep vector 'sb-kernel:simple-unboxed-array)
+          #-sbcl NIL
+          (decode-entry #'fast-copy entry :password password)
+          (decode-entry #'slow-copy entry :password password))
       vector)))
 
 (defun extract-zip (file path &key (if-exists :error) password)
@@ -113,15 +117,7 @@
     (zip-file
      file)))
 
-(defun compress-zip (file target &key (start 0) (if-exists :error) password)
+(defun compress-zip (file target &key (start 0) end (if-exists :error) password)
   (let ((file (ensure-zip-file file)))
-    (etypecase target
-      ((or string pathname)
-       (with-open-file (stream target :direction :output
-                                      :element-type '(unsigned-byte 8)
-                                      :if-exists if-exists)
-         (encode file stream :password password)))
-      (stream
-       (encode file target :password password))
-      (vector
-       (encode file (make-vector-input target start) :password password)))))
+    (with-io (io target :direction :output :if-exists if-exists :start start :end end)
+      (encode-file file io :password password))))

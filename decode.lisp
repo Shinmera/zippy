@@ -30,7 +30,7 @@
     (zip64-extended-information
      (setf (size entry) (zip64-extended-information-compressed-size field))
      (setf (uncompressed-size entry) (zip64-extended-information-original-size field))
-     (setf (start entry) (zip64-extended-information-header-offset field))
+     (setf (offset entry) (zip64-extended-information-header-offset field))
      (setf (disk entry) (zip64-extended-information-starting-disk field)))
     (encryption-header
      (setf (encryption-method entry)
@@ -76,7 +76,7 @@
   (setf (crc-32 entry) (central-directory-entry-crc-32 cde))
   (setf (size entry) (central-directory-entry-compressed-size cde))
   (setf (uncompressed-size entry) (central-directory-entry-uncompressed-size cde))
-  (setf (start entry) (central-directory-entry-local-header-offset cde))
+  (setf (offset entry) (central-directory-entry-local-header-offset cde))
   (setf (disk entry) (central-directory-entry-disk-number-start cde))
   (setf (last-modified entry) (decode-msdos-timestamp (central-directory-entry-last-modified-date cde)
                                                       (central-directory-entry-last-modified-time cde)))
@@ -107,14 +107,15 @@
     ;; First seek to end of file, then backtrack to find the end-of-central-directory signature.
     ;; We skip the bytes that are guaranteed to be part of the structure anyway. Thus, if the
     ;; comment is empty, we should immediately end up at the signature.
-    (seek input (- (size input) (+ 4 2 2 2 2 4 4 2)))
+    (seek input (- (end input) (+ 4 2 2 2 2 4 4 2)))
     (loop for byte = (ub32 input)
           until (= #x06054B50 byte)
           ;; Seek back the 4 bytes we read +1 extra byte.
           ;; TODO: This could be sped up by trying to match parts of the signature against what we
           ;;       read and then speculatively back up more bytes.
-          ;; TODO: Check for trying to seek out of the beginning of the file.
-          do (seek input (- (index input) 5)))
+          do (if (<= (start input) (- (index input) 5))
+                 (seek input (- (index input) 5))
+                 (error "This does not appear to be a Zip file:~%No end of central directory marker could be found.")))
     ;; We should now be at the beginning (after the signature) of the end-of-central-directory.
     (let* ((eocd (parse-structure end-of-central-directory input))
            (cd-offset (end-of-central-directory-central-directory-start eocd))
@@ -173,7 +174,7 @@ one."))
               do (setf (zip-file entry) zip-file))
         zip-file))))
 
-(defun call-with-input-zip-file (function input &key (start 0))
+(defun call-with-input-zip-file (function input &key (start 0) end)
   (etypecase input
     ((or pathname string)
      (let ((streams ()))
@@ -192,15 +193,20 @@ one."))
     (stream
      (funcall function (decode-file input)))
     ((vector (unsigned-byte 8))
-     (funcall function (decode-file (make-vector-input input start))))))
+     (funcall function (decode-file (make-vector-input input start start (or end (length input))))))))
 
 ;; FIXME: Allow supplying an END to the octet-vector, too.
-(defmacro with-zip-file ((file input &key (start 0)) &body body)
-  `(call-with-input-zip-file (lambda (,file) ,@body) ,input :start ,start))
+(defmacro with-zip-file ((file input &key (start 0) end) &body body)
+  `(call-with-input-zip-file (lambda (,file) ,@body) ,input :start ,start :end ,end))
 
 (defun decode-entry (function entry &key password)
-  (let ((input (aref (disks (zip-file entry)) (disk entry))))
-    (seek input (start entry))
+  (let* ((disks (disks (zip-file entry)))
+         (disk (disk entry))
+         (input (or (aref disks disk)
+                    (restart-case (error 'archive-file-required :disk disk)
+                      (use-value (new-input)
+                        (setf (aref disks disk) new-input))))))
+    (seek input (offset entry))
     (lf-to-entry (parse-structure* input) entry)
     ;; Now at beginning of the data payload
     (let ((decryption-state (apply #'make-decryption-state (first (encryption-method entry)) input password (rest (encryption-method entry))))
