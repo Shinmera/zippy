@@ -143,10 +143,10 @@ See ARCHIVE-FILE-REQUIRED"))
 
 ;; encode.lisp
 (docs:define-docs
-  (function *version*
+  (variable *version*
     "The max zip file version supported by this library.")
   
-  (function *compatibility*
+  (variable *compatibility*
     "The default file attribute compatibility flag.")
 
   (function encode-file
