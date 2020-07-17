@@ -58,7 +58,7 @@
       (decode-entry #'output entry :password password)))
   (when restore-attributes
     ;; TODO: restore other extended attributes from the extra block (uid/gid/etc)
-    (setf (file-attributes:permissions path) (second (attributes entry)))))
+    (setf (file-attributes:permissions path) (third (attributes entry)))))
 
 (defun entry-to-stream (stream entry &key password)
   (flet ((output (buffer start end)

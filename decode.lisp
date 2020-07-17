@@ -71,8 +71,8 @@
 
 (defun cde-to-entry (cde entry)
   (setf (version entry) (decode-version (central-directory-entry-version-needed cde)))
-  (setf (attributes entry) (list (file-attribute-name (ldb (byte 8 8) (central-directory-entry-version-made cde)))
-                                 (central-directory-entry-external-file-attributes cde)))
+  (setf (attributes entry) (decode-file-attribute (ldb (byte 8 8) (central-directory-entry-version-made cde))
+                                                  (central-directory-entry-external-file-attributes cde)))
   (setf (crc-32 entry) (central-directory-entry-crc-32 cde))
   (setf (size entry) (central-directory-entry-compressed-size cde))
   (setf (uncompressed-size entry) (central-directory-entry-uncompressed-size cde))

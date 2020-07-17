@@ -39,22 +39,24 @@
        (unless (file-name entry)
          (setf (file-name entry) (file-namestring content)))
        (unless (attributes entry)
-         (setf (attributes entry) (list *compatibility*
-                                        (file-attributes:permissions content)))))
+         (setf (attributes entry) (list '(:normal)
+                                        *compatibility*
+                                        (file-attributes:attributes content)))))
       ((or string pathname)
        (setf (last-modified entry) (file-write-date content))
        (unless (file-name entry)
          (setf (file-name entry) (file-namestring content)))
        (unless (attributes entry)
-         (setf (attributes entry) (list *compatibility*
-                                        (file-attributes:permissions content)))))
+         (setf (attributes entry) (list '(:normal)
+                                        *compatibility*
+                                        (file-attributes:attributes content)))))
       (stream)
       (vector-input
        (setf (uncompressed-size entry) (size content)))
       (vector
        (setf (uncompressed-size entry) (length content))))
     (unless (attributes entry)
-      (setf (attributes entry) (list *compatibility* (default-attributes-for *compatibility*))))
+      (setf (attributes entry) (list '(:normal) *compatibility* (default-attributes-for *compatibility*))))
     (when (and (null (compression-method entry))
                (< 1024 (or (uncompressed-size entry) 1025)))
       (setf (compression-method entry) :deflate))))
@@ -62,7 +64,7 @@
 (defun entry-version (entry)
   (encode-version (or (version entry) *version*)
                   (if (consp (attributes entry))
-                      (first (attributes entry))
+                      (second (attributes entry))
                       *compatibility*)))
 
 (defun entry-compression-id (entry)
@@ -141,7 +143,7 @@
        (if (size entry) (cap (size entry) 32) 0)
        (if (uncompressed-size entry) (cap (uncompressed-size entry) 32) 0)
        (length file-name) (length extra) (length comment)
-       0 0 (or (second (attributes entry)) 0) (cap (offset entry) 32)
+       0 0 (or (encode-file-attribute (attributes entry)) 0) (cap (offset entry) 32)
        file-name extra comment))))
 
 (defun encode-entry-payload (entry output password)

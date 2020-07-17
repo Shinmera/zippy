@@ -613,8 +613,9 @@ See ZIP-ENTRY")
   (function attributes
     "Accesses the file attributes.
 
-This should be a list of two entries, the file attribute compatibility
-identifier, and the actual attributes encoded as an integer.
+This should be a list of three entries, the MSDOS file attribute list,
+the compatibility identifier, and the system-specific attributes
+encoded as an integer.
 
 For ZIP-ENTRIES that are backed by a file, this entry is computed
 automatically when the entry is encoded.
