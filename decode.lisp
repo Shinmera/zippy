@@ -195,10 +195,6 @@ one."))
     ((vector (unsigned-byte 8))
      (funcall function (decode-file (make-vector-input input start start (or end (length input))))))))
 
-;; FIXME: Allow supplying an END to the octet-vector, too.
-(defmacro with-zip-file ((file input &key (start 0) end) &body body)
-  `(call-with-input-zip-file (lambda (,file) ,@body) ,input :start ,start :end ,end))
-
 (defun decode-entry (function entry &key password)
   (let* ((disks (disks (zip-file entry)))
          (disk (disk entry))

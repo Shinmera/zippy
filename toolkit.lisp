@@ -6,6 +6,19 @@
 
 (in-package #:org.shirakumo.zippy)
 
+(defvar *version*
+  '(4 5))
+
+(defvar *compatibility*
+  #+windows :ntfs
+  #+darwin :darwin
+  #+(and unix (not darwin)) :unix)
+
+(defun default-attributes-for (system)
+  (case system
+    ((:darwin :unix) #o644)
+    (T 0)))
+
 (defun ensure-buffer (buffer)
   (etypecase buffer
     (vector buffer)

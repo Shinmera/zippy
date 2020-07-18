@@ -6,19 +6,6 @@
 
 (in-package #:org.shirakumo.zippy)
 
-(defvar *version*
-  '(4 5))
-
-(defvar *compatibility*
-  #+windows :ntfs
-  #+darwin :darwin
-  #+(and unix (not darwin)) :unix)
-
-(defun default-attributes-for (system)
-  (case system
-    ((:darwin :unix) #o644)
-    (T 0)))
-
 (defun entry-flags (entry)
   (bitfield (encryption-method entry)
             NIL
@@ -33,23 +20,18 @@
 (defun backfill-from-content (entry)
   (let ((content (content entry)))
     (etypecase content
-      (file-stream
-       (setf (last-modified entry) (file-write-date content))
-       (setf (uncompressed-size entry) (file-length content))
-       (unless (file-name entry)
-         (setf (file-name entry) (file-namestring content)))
-       (unless (attributes entry)
-         (setf (attributes entry) (list '(:normal)
-                                        *compatibility*
-                                        (file-attributes:attributes content)))))
-      ((or string pathname)
+      ((or string pathname file-stream)
        (setf (last-modified entry) (file-write-date content))
        (unless (file-name entry)
          (setf (file-name entry) (file-namestring content)))
        (unless (attributes entry)
          (setf (attributes entry) (list '(:normal)
                                         *compatibility*
-                                        (file-attributes:attributes content)))))
+                                        (file-attributes:attributes content))))
+       (typecase content
+         (file-stream (setf (uncompressed-size entry) (file-length content)))
+         (T (with-open-file (stream content :direction :input :element-type '(unsigned-byte 8))
+              (setf (uncompressed-size entry) (file-length stream))))))
       (stream)
       (vector-input
        (setf (uncompressed-size entry) (size content)))

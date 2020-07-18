@@ -247,15 +247,14 @@
 
 (defun decode-file-attribute (compat attr)
   (let ((compat (file-attribute-name compat))
-        (msdos (ldb (byte 8 0) attre))
+        (msdos (ldb (byte 8 0) attr))
         (os-specific (ldb (byte 16 16) attr)))
-    (let ((msdos (debitfield msdos :read-only :hidden :system-file :? :directory :archived :device :normal :temporary :sparse :link :compressed :offline :not-indexed :encrypted :integrity :virtual :no-scrub :recall)))
-      (list msdos compat os-specific))))
+    (list (file-attributes:decode-attributes msdos :windows) compat os-specific)))
 
 (defun encode-file-attribute (thing)
   (destructuring-bind (msdos compat os-specific) thing
     (declare (ignore compat))
     (let ((i 0))
-      (setf (ldb (byte 8 0) i) (enbitfield msds :read-only :hidden :system-file :? :directory :archived :device :normal))
+      (setf (ldb (byte 8 0) i) (logand #xFF (file-attributes:encode-attributes msdos :windows)))
       (setf (ldb (byte 16 16) i) (logand #xFFFF os-specific))
       i)))

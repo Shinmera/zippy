@@ -56,9 +56,10 @@
     (flet ((output (buffer start end)
              (write-sequence buffer stream :start start :end end)))
       (decode-entry #'output entry :password password)))
-  (when restore-attributes
-    ;; TODO: restore other extended attributes from the extra block (uid/gid/etc)
-    (setf (file-attributes:permissions path) (third (attributes entry)))))
+  (when (and restore-attributes
+             (eql *compatibility* (second (attributes entry))))
+    ;; TODO: restore other extended attributes from the extra blocks (uid/gid/etc)
+    (setf (file-attributes:attributes path) (third (attributes entry)))))
 
 (defun entry-to-stream (stream entry &key password)
   (flet ((output (buffer start end)
@@ -88,13 +89,18 @@
           (decode-entry #'slow-copy entry :password password))
       vector)))
 
+;; Early define
+(defmacro with-zip-file ((file input &key (start 0) end) &body body)
+  `(call-with-input-zip-file (lambda (,file) ,@body) ,input :start ,start :end ,end))
+
 (defun extract-zip (file path &key (if-exists :error) password)
   (etypecase file
     (zip-file
      (loop for entry across (entries file)
            for full-path = (merge-pathnames (file-name entry) path)
            do (ensure-directories-exist full-path)
-              (entry-to-file full-path entry :if-exists if-exists :password password)))
+              (unless (find :directory (first (attributes entry)))
+                (entry-to-file full-path entry :if-exists if-exists :password password))))
     (T
      (with-zip-file (zip file)
        (extract-zip path zip :if-exists if-exists)))))
