@@ -32,4 +32,5 @@
                :alexandria
                :nibbles
                :babel
-               :3bz))
+               :3bz
+               :salza2))

@@ -11,6 +11,7 @@
 
 (defgeneric make-encryption-state (format password &key buffer))
 (defgeneric call-with-encrypted-buffer (function vector start end state))
+(defgeneric call-with-completed-encrypted-buffer (function state))
 
 (defmethod make-decryption-state (format input password &rest args)
   (declare (ignore args))
@@ -37,6 +38,9 @@
 
 (defmethod call-with-encrypted-buffer (function vector start end (state (eql NIL)))
   (funcall function vector start end))
+
+(defmethod call-with-completed-encrypted-buffer (function (state (eql NIL)))
+  (funcall function #() 0 0))
 
 ;; TODO: Support for AE-X https://www.winzip.com/win/en/aes_info.html
 ;; TODO: Support for other encryption methods

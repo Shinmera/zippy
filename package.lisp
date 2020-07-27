@@ -13,7 +13,8 @@
    #:make-decompression-state
    #:call-with-decompressed-buffer
    #:make-compression-state
-   #:call-with-compressed-buffer)
+   #:call-with-compressed-buffer
+   #:call-with-completed-compressed-buffer)
   ;; decode.lisp
   (:export
    #:archive-file-required
@@ -31,7 +32,8 @@
    #:make-decryption-state
    #:call-with-decrypted-buffer
    #:make-encryption-state
-   #:call-with-encrypted-buffer)
+   #:call-with-encrypted-buffer
+   #:call-with-completed-encrypted-buffer)
   ;; io.lisp
   (:export
    #:io

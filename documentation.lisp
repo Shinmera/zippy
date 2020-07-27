@@ -44,7 +44,8 @@ output buffer for the compression. The buffer spec may be either NIL
 for a default buffer, an octet vector, or an integer for an octet
 vector of the given size.
 
-See CALL-WITH-COMPRESSED-BUFFER")
+See CALL-WITH-COMPRESSED-BUFFER
+See CALL-WITH-COMPLETED-COMPRESSED-BUFFER")
   
   (function call-with-compressed-buffer
     "Call the supplied function with a compressed buffer.
@@ -62,7 +63,28 @@ You may call this function repeatedly with new input to compress
 until the full region has been processed. The supplied function
 likewise may be called multiple times per compression run.
 
-See MAKE-COMPRESSION-STATE"))
+See MAKE-COMPRESSION-STATE
+See CALL-WITH-COMPLETED-COMPRESSED-BUFFER")
+
+  (function call-with-completed-compressed-buffer
+    "Finishes the compression and calls the function with tail data.
+
+The function is called with three arguments:
+  An octet buffer with the compressed data
+  A start index to the beginning of valid data
+  An end index to the end of valid data
+
+The supplied STATE must be a state obtained through
+MAKE-COMPRESSION-STATE. The VECTOR, START, and END supply the octets
+to compress.
+
+You must call this function only once, after all data has been
+processed via CALL-WITH-COMPRESSED-BUFFER. Further calls to
+CALL-WITH-COMPRESSED-BUFFER after this function has been called are
+illegal.
+
+See MAKE-COMPRESSION-STATE
+See CALL-WITH-COMPRESSED-BUFFER"))
 
 ;; decode.lisp
 (docs:define-docs
@@ -212,7 +234,8 @@ output buffer for the encryption. The buffer spec may be either NIL
 for a default buffer, an octet vector, or an integer for an octet
 vector of the given size.
 
-See CALL-WITH-ENCRYPTED-BUFFER")
+See CALL-WITH-ENCRYPTED-BUFFER
+See CALL-WITH-COMPLETED-ENCRYPTED-BUFFER")
   
   (function call-with-encrypted-buffer
     "Call the supplied function with an encrypted buffer.
@@ -230,7 +253,28 @@ You may call this function repeatedly with new input to encrypt
 until the full region has been processed. The supplied function
 likewise may be called multiple times per encryption run.
 
-See MAKE-ENCRYPTION-STATE"))
+See MAKE-ENCRYPTION-STATE
+See CALL-WITH-COMPLETED-ENCRYPTED-BUFFER")
+
+  (function call-with-completed-encrypted-buffer
+    "Finishes the encryption and calls the function with tail data.
+
+The function is called with three arguments:
+  An octet buffer with the compressed data
+  A start index to the beginning of valid data
+  An end index to the end of valid data
+
+The supplied STATE must be a state obtained through
+MAKE-ENCRYPTION-STATE. The VECTOR, START, and END supply the octets
+to compress.
+
+You must call this function only once, after all data has been
+processed via CALL-WITH-ENCRYPTED-BUFFER. Further calls to
+CALL-WITH-ENCRYPTED-BUFFER after this function has been called are
+illegal.
+
+See MAKE-ENCRYPTION-STATE
+See CALL-WITH-ENCRYPTED-BUFFER"))
 
 ;; io.lisp
 (docs:define-docs

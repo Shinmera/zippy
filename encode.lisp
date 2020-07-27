@@ -152,7 +152,9 @@
                  while (< 0 read)
                  do (compress buffer 0 read)))
           (vector-input
-           (compress (vector-input-vector input) (vector-input-index input) (vector-input-end input)))))
+           (compress (vector-input-vector input) (vector-input-index input) (vector-input-end input))))
+        (call-with-completed-compressed-buffer #'encrypt compression-state)
+        (call-with-completed-encrypted-buffer #'write-out encryption-state))
       (setf (crc-32 entry) (logxor #xFFFFFFFF crc))
       (setf (size entry) written)
       (setf (uncompressed-size entry) read))))

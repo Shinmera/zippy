@@ -11,6 +11,7 @@
 
 (defgeneric make-compression-state (format &key buffer))
 (defgeneric call-with-compressed-buffer (function vector start end state))
+(defgeneric call-with-completed-compressed-buffer (function state))
 
 (defmethod make-decompression-state (format &key buffer)
   (error "Unsupported compression method: ~a" format))
@@ -38,3 +39,17 @@
 
 (defmethod call-with-compressed-buffer (function vector start end (state null))
   (funcall function vector start end))
+
+(defmethod call-with-completed-compressed-buffer (function (state (eql NIL)))
+  (funcall function #() 0 0))
+
+(defmethod make-compression-state ((format (eql :deflate)) &key buffer)
+  (make-instance 'salza2:deflate-compressor))
+
+(defmethod call-with-compressed-buffer (function vector start end (state salza2:deflate-compressor))
+  (setf (salza2:callback state) (lambda (buffer end) (funcall function buffer 0 end)))
+  (salza2:compress-octet-vector vector state :start start :end end))
+
+(defmethod call-with-completed-compressed-buffer (function (state salza2:deflate-compressor))
+  (setf (salza2:callback state) (lambda (buffer end) (funcall function buffer 0 end)))
+  (salza2:finish-compression state))
