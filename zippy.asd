@@ -29,6 +29,7 @@
                (:file "documentation"))
   :depends-on (:documentation-utils
                :file-attributes
+               :pathname-utils
                :alexandria
                :nibbles
                :babel

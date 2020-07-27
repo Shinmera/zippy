@@ -25,7 +25,7 @@
        (unless (file-name entry)
          (setf (file-name entry) (file-namestring content)))
        (unless (attributes entry)
-         (setf (attributes entry) (list '(:normal)
+         (setf (attributes entry) (list '(:normal T)
                                         *compatibility*
                                         (file-attributes:attributes content))))
        (typecase content
@@ -38,7 +38,7 @@
       (vector
        (setf (uncompressed-size entry) (length content))))
     (unless (attributes entry)
-      (setf (attributes entry) (list '(:normal) *compatibility* (default-attributes-for *compatibility*))))
+      (setf (attributes entry) (list '(:normal T) *compatibility* (default-attributes-for *compatibility*))))
     (when (and (null (compression-method entry))
                (< 1024 (or (uncompressed-size entry) 1025)))
       (setf (compression-method entry) :deflate))))
