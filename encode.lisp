@@ -147,10 +147,12 @@
                  (call-with-compressed-buffer #'encrypt buffer start end compression-state)))
         (etypecase input
           (stream
-           (loop with buffer = (make-array 4096 :element-type '(unsigned-byte 8))
-                 for read = (read-sequence buffer input)
-                 while (< 0 read)
-                 do (compress buffer 0 read)))
+           (when (or (not (typep input 'file-stream))
+                     (not (pathname-utils:directory-p input)))
+             (loop with buffer = (make-array 4096 :element-type '(unsigned-byte 8))
+                   for read = (read-sequence buffer input)
+                   while (< 0 read)
+                   do (compress buffer 0 read))))
           (vector-input
            (compress (vector-input-vector input) (vector-input-index input) (vector-input-end input))))
         (call-with-completed-compressed-buffer #'encrypt compression-state)
