@@ -74,11 +74,8 @@
     (flet ((fast-copy (buffer start end)
              #+sbcl
              (sb-sys:with-pinned-objects (vector buffer)
-               (let ((vector (sb-sys:vector-sap vector))
-                     (buffer (sb-sys:vector-sap buffer)))
-                 (sb-alien:alien-funcall (sb-alien:extern-alien "memcpy" (function sb-alien:void sb-sys:system-area-pointer sb-sys:system-area-pointer sb-alien:size-t))
-                                         (sb-sys:sap+ vector i) (sb-sys:sap+ buffer start) (- end start))
-                 (incf i (- end start)))))
+               (sb-kernel:system-area-ub8-copy (sb-sys:vector-sap buffer) start (sb-sys:vector-sap vector) i (- end start))
+               (incf i (- end start))))
            (slow-copy (buffer start end)
              (loop for j from start below end
                    do (setf (aref vector i) (aref buffer j))
