@@ -15,8 +15,7 @@
 
 (defun crc32-rotate (crc byte)
   (logxor (ldb (byte 24 8) crc)
-          (aref 3bz::+crc32/table+ (ldb (byte 8 0) (logxor crc byte)))
-          #xFFFFFFFF))
+          (aref 3bz::+crc32/table+ (ldb (byte 8 0) (logxor crc byte)))))
 
 (defun update-pkware-state (state byte)
   (setf (pkware-decrypt-state-k0 state) (crc32-rotate (pkware-decrypt-state-k0 state) byte))
