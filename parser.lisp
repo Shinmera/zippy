@@ -237,8 +237,9 @@
   (multiple-value-bind (major minor) (floor (ldb (byte 8 0) version) 10)
     (list major minor)))
 
-(defun encode-version (version compatibility)
+(defun encode-version (version &optional compatibility)
   (let ((idx (etypecase compatibility
+               (null 0)
                (integer compatibility)
                (keyword (file-attribute-id compatibility))))
         (int (+ (* 10 (first version)) (second version))))

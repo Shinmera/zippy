@@ -180,9 +180,9 @@
           (comment (encode-string (comment zip-file))))
       (write-structure* (make-end-of-central-directory/64
                          44
-                         (encode-version *version* *compatibility*)
+                         (encode-version *version*)
                          ;; FIXME: be smarter about noting the min version.
-                         (encode-version *version* *compatibility*)
+                         (encode-version *version*)
                          0 0 (length (entries zip-file)) (length (entries zip-file))
                          (- cd-end cd-start) cd-start #())
                         output)
