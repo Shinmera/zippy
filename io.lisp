@@ -7,13 +7,15 @@
 (in-package #:org.shirakumo.zippy)
 
 (deftype io ()
-  `(or stream vector-input))
+  `(or stream vector-input directory-input))
 
 (defstruct (vector-input (:constructor make-vector-input (vector index start end)))
   (vector NIL :type (simple-array (unsigned-byte 8) *) :read-only T)
   (start 0 :type fixnum :read-only T)
   (end 0 :type fixnum :read-only T)
   (index 0 :type fixnum))
+
+(defstruct directory-input)
 
 (defun seek (io target)
   (etypecase io
@@ -116,10 +118,12 @@
 (defun call-with-io (function io &key (start 0) end (if-exists :error) (direction :input))
   (etypecase io
     ((or string pathname)
-     (with-open-file (stream io :direction direction
-                                :element-type '(unsigned-byte 8)
-                                :if-exists if-exists)
-       (funcall function stream)))
+     (if (pathname-utils:directory-p io)
+         (funcall function (make-directory-input))
+         (with-open-file (stream io :direction direction
+                                    :element-type '(unsigned-byte 8)
+                                    :if-exists if-exists)
+           (funcall function stream))))
     (io
      (funcall function io))
     (vector
