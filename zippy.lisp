@@ -100,7 +100,7 @@
                 (entry-to-file full-path entry :if-exists if-exists :password password))))
     (T
      (with-zip-file (zip file)
-       (extract-zip path zip :if-exists if-exists)))))
+       (extract-zip zip path :if-exists if-exists)))))
 
 (defun ensure-zip-file (file)
   (etypecase file
