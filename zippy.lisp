@@ -96,7 +96,7 @@
      (loop for entry across (entries file)
            for full-path = (merge-pathnames (file-name entry) path)
            do (ensure-directories-exist full-path)
-              (unless (find :directory (first (attributes entry)))
+              (unless (getf (first (attributes entry)) :directory)
                 (entry-to-file full-path entry :if-exists if-exists :password password))))
     (T
      (with-zip-file (zip file)
