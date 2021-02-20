@@ -25,13 +25,18 @@
        (unless (file-name entry)
          (setf (file-name entry) (file-namestring content)))
        (unless (attributes entry)
-         (setf (attributes entry) (list '(:normal T)
+         (setf (attributes entry) (list `(,(if (pathname-utils:directory-p content)
+                                               :directory
+                                               :normal)
+                                          T)
                                         *compatibility*
                                         (file-attributes:attributes content))))
-       (typecase content
-         (file-stream (setf (uncompressed-size entry) (file-length content)))
-         (T (with-open-file (stream content :direction :input :element-type '(unsigned-byte 8))
-              (setf (uncompressed-size entry) (file-length stream))))))
+       (unless (pathname-utils:directory-p content)
+         (typecase content
+           (file-stream (setf (uncompressed-size entry) (file-length content)))
+           (T
+            (with-open-file (stream content :direction :input :element-type '(unsigned-byte 8))
+              (setf (uncompressed-size entry) (file-length stream)))))))
       (stream)
       (vector-input
        (setf (uncompressed-size entry) (size content)))
