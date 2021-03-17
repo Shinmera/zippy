@@ -21,6 +21,7 @@
    #:disk
    #:decode-file
    #:with-zip-file
+   #:open-zip-file
    #:decode-entry)
   ;; encode.lisp
   (:export

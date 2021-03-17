@@ -100,27 +100,16 @@ See DECODE-FILE
 See DECODE-ENTRY")
   
   (function with-zip-file
-    "Open a zip file.
-
-INPUT may be a pathname or string to designate a local file, a
-seekable stream to read from, or an octet-vector to decode.
+    "Open a zip file lexically and cleans up on exit.
 
 If decoding is successful, FILE will be bound to the resulting
 ZIP-FILE instance. This instance is only valid within BODY. After
 leaving the BODY, you may still access metadata and zip entries, but
 you may not use DECODE-ENTRY to extract an entry's payload.
 
-If the zip file is split and the supplied INPUT is a pathname
-designator, other split disks will be determined automatically by
-using the same pathname, but substituting the pathname-type by the
-scheme z{DISK} . If INPUT is not a pathname designator, a condition of
-type ARCHIVE-FILE-REQUIRED is signalled for every split disk that is
-required.
-
-See ZIP-FILE
-See DECODE-FILE
 See DECODE-ENTRY
-See ARCHIVE-FILE-REQUIRED")
+See DECODE-FILE
+See OPEN-ZIP-FILE")
 
   (function decode-file
     "Decode the given IO into a ZIP-FILE.
@@ -138,6 +127,34 @@ would make it a valid zip file.
 
 See WITH-ZIP-FILE
 See ARCHIVE-FILE-REQUIRED")
+
+  (function open-zip-file
+    "Opens a zip file and parses its directory.
+
+Returns two values if successful:
+  The new ZIP-FILE that was parsed
+  A list of streams that were opened
+
+After closing the streams the ZIP-FILE contents cannot be extracted,
+so you must take care to close them at the opportune time
+yourself. For a lexical variant of this, see WITH-ZIP-FILE.
+
+INPUT may be a pathname or string to designate a local file, a
+seekable stream to read from, or an octet-vector to decode.
+
+If the zip file is split and the supplied INPUT is a pathname
+designator, other split disks will be determined automatically by
+using the same pathname, but substituting the pathname-type by the
+scheme z{DISK} . If INPUT is not a pathname designator, a condition of
+type ARCHIVE-FILE-REQUIRED is signalled for every split disk that is
+required, for which you should invoke the USE-VALUE restart with the
+newly opened stream.
+
+See ZIP-FILE
+See DECODE-FILE
+See DECODE-ENTRY
+See ARCHIVE-FILE-REQUIRED
+See WITH-ZIP-FILE")
   
   (function decode-entry
     "Decode the data payload of the ZIP-ENTRY

@@ -174,10 +174,11 @@ one."))
               do (setf (zip-file entry) zip-file))
         zip-file))))
 
-(defun call-with-input-zip-file (function input &key (start 0) end)
+(defun open-zip-file (input &key (start 0) end)
   (etypecase input
     ((or pathname string)
-     (let ((streams ()))
+     (let ((streams (list (open input :element-type '(unsigned-byte 8))))
+           (success NIL))
        (handler-bind ((archive-file-required
                         (lambda (c)
                           (let ((id (disk c)))
@@ -185,15 +186,21 @@ one."))
                                                 :element-type '(unsigned-byte 8))))
                               (push stream streams)
                               (use-value stream))))))
-         (with-open-file (stream input :element-type '(unsigned-byte 8))
-           (unwind-protect
-                (let ((file (decode-file stream)))
-                  (funcall function file))
+         (unwind-protect
+              (let ((file (decode-file (first streams))))
+                (setf success T)
+                (values file streams))
+           (unless success
              (mapc #'close streams))))))
     (stream
-     (funcall function (decode-file input)))
+     (decode-file input))
     ((vector (unsigned-byte 8))
-     (funcall function (decode-file (make-vector-input input start start (or end (length input))))))))
+     (decode-file (make-vector-input input start start (or end (length input)))))))
+
+(defun call-with-input-zip-file (function input &key (start 0) end)
+  (multiple-value-bind (file streams) (open-zip-file input :start start :end end)
+    (unwind-protect (funcall function file)
+      (mapc #'close streams))))
 
 (defun decode-entry (function entry &key password)
   (let* ((disks (disks (zip-file entry)))
