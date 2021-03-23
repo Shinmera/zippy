@@ -141,7 +141,8 @@
                 (setf cd-offset (end-of-central-directory/64-central-directory-start eocd))
                 (setf cd-start-disk (end-of-central-directory/64-central-directory-disk eocd))
                 (setf cd-end-disk (end-of-central-directory/64-number-of-disk eocd))
-                (setf entries (make-array (end-of-central-directory/64-central-directory-entries eocd) :initial-element NIL)))
+                (setf entries (make-array (end-of-central-directory/64-central-directory-entries eocd)
+                                          :initial-element NIL :adjustable T :fill-pointer T)))
               (warn "File appears corrupted: 
 
 Zip64 End of Central Directory Record was not at indicated position.
@@ -155,7 +156,8 @@ one."))
             (T
              (let ((i 0))
                (unless entries
-                 (setf entries (make-array (end-of-central-directory-central-directory-entries eocd) :initial-element NIL)))
+                 (setf entries (make-array (end-of-central-directory-central-directory-entries eocd)
+                                           :initial-element NIL :adjustable T :fill-pointer T)))
                (unless disks
                  (setf disks (make-array (1+ (end-of-central-directory-number-of-disk eocd)) :initial-element NIL)))
                (unless (= #xFFFF (end-of-central-directory-number-of-disk eocd))
