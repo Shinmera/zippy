@@ -41,10 +41,14 @@
       (vector-input
        (setf (uncompressed-size entry) (size content)))
       (vector
-       (setf (uncompressed-size entry) (length content))))
+       (setf (uncompressed-size entry) (length content)))
+      (null
+       (unless (attributes entry) ;; Assume directory.
+         (setf (attributes entry) (list '(:directory T) *compatibility* (default-attributes-for *compatibility*))))))
     (unless (attributes entry)
       (setf (attributes entry) (list '(:normal T) *compatibility* (default-attributes-for *compatibility*))))
-    (when (and (null (compression-method entry))
+    (when (and content
+               (null (compression-method entry))
                (< 1024 (or (uncompressed-size entry) 1025)))
       (setf (compression-method entry) :deflate))))
 
@@ -134,38 +138,48 @@
        file-name extra comment))))
 
 (defun encode-entry-payload (entry output password)
-  (with-io (input (content entry))
-    (let ((read 0)
-          (written 0)
-          (crc #xFFFFFFFF)
-          (encryption-state (make-encryption-state (encryption-method entry) password))
-          (compression-state (make-compression-state (compression-method entry))))
-      (labels ((write-out (buffer start end)
-                 (incf written (- end start))
-                 (output output buffer start end))
-               (encrypt (buffer start end)
-                 (call-with-encrypted-buffer #'write-out buffer start end encryption-state))
-               (compress (buffer start end)
-                 (incf read (- end start))
-                 (loop for i from start below end
-                       do (setf crc (crc32-rotate crc (aref buffer i))))
-                 (call-with-compressed-buffer #'encrypt buffer start end compression-state)))
-        (etypecase input
-          (stream
-           (when (or (not (typep input 'file-stream))
-                     (not (pathname-utils:directory-p input)))
-             (loop with buffer = (make-array 4096 :element-type '(unsigned-byte 8))
-                   for read = (read-sequence buffer input)
-                   while (< 0 read)
-                   do (compress buffer 0 read))))
-          (vector-input
-           (compress (vector-input-vector input) (vector-input-index input) (vector-input-end input)))
-          (directory-input))
-        (call-with-completed-compressed-buffer #'encrypt compression-state)
-        (call-with-completed-encrypted-buffer #'write-out encryption-state))
-      (setf (crc-32 entry) (logxor #xFFFFFFFF crc))
-      (setf (size entry) written)
-      (setf (uncompressed-size entry) read))))
+  (cond ((content entry)
+         (with-io (input (content entry))
+           (let ((read 0)
+                 (written 0)
+                 (crc #xFFFFFFFF)
+                 (encryption-state (make-encryption-state (encryption-method entry) password))
+                 (compression-state (make-compression-state (compression-method entry))))
+             (labels ((write-out (buffer start end)
+                        (incf written (- end start))
+                        (output output buffer start end))
+                      (encrypt (buffer start end)
+                        (call-with-encrypted-buffer #'write-out buffer start end encryption-state))
+                      (compress (buffer start end)
+                        (incf read (- end start))
+                        (loop for i from start below end
+                              do (setf crc (crc32-rotate crc (aref buffer i))))
+                        (call-with-compressed-buffer #'encrypt buffer start end compression-state)))
+               (etypecase input
+                 (stream
+                  (when (or (not (typep input 'file-stream))
+                            (not (pathname-utils:directory-p input)))
+                    (loop with buffer = (make-array 4096 :element-type '(unsigned-byte 8))
+                          for read = (read-sequence buffer input)
+                          while (< 0 read)
+                          do (compress buffer 0 read))))
+                 (vector-input
+                  (compress (vector-input-vector input) (vector-input-index input) (vector-input-end input)))
+                 (directory-input))
+               (call-with-completed-compressed-buffer #'encrypt compression-state)
+               (call-with-completed-encrypted-buffer #'write-out encryption-state))
+             (setf (crc-32 entry) (logxor #xFFFFFFFF crc))
+             (setf (size entry) written)
+             (setf (uncompressed-size entry) read))))
+        ((offset entry)
+         ;; We are copying from source archive. Just transfer the bytes.
+         (labels ((write-out (buffer start end)
+                    (output output buffer start end)))
+           (entry-raw-bytes #'write-out entry)))
+        (T
+         (setf (crc-32 entry) #xFFFFFFFF)
+         (setf (size entry) 0)
+         (setf (uncompressed-size entry) 0))))
 
 (defun encode-file (zip-file output &key password)
   (loop for i from 0
