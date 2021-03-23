@@ -29,7 +29,7 @@
         (null (format stream "CLOSED"))))))
 
 (defclass zip-entry ()
-  ((zip-file :initform NIL :accessor zip-file)
+  ((zip-file :initarg :zip-file :initform NIL :accessor zip-file)
    (crc-32 :initform NIL :accessor crc-32)
    (disk :initform NIL :accessor disk)
    (offset :initform NIL :accessor offset)
