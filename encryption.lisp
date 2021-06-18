@@ -29,7 +29,7 @@
         do (funcall function buffer 0 read)
            (decf length read)))
 
-(defmethod call-with-decrypted-buffer (function (input vector-input) length (format vector))
+(defmethod call-with-decrypted-buffer (function (input vector-input) length ignore)
   (let ((start (vector-input-index input)))
     (funcall function (vector-input-vector input) start (+ start length))))
 
