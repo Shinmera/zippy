@@ -48,9 +48,10 @@
     (unless (attributes entry)
       (setf (attributes entry) (list '(:normal T) *compatibility* (default-attributes-for *compatibility*))))
     (when (and content
-               (null (compression-method entry))
-               (< 1024 (or (uncompressed-size entry) 1025)))
-      (setf (compression-method entry) :deflate))))
+               (null (compression-method entry)))
+      (if (< 1024 (or (uncompressed-size entry) 1025))
+          (setf (compression-method entry) :deflate)
+          (setf (compression-method entry) :store)))))
 
 (defun entry-version (entry)
   (encode-version (or (version entry) *version*)

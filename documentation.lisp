@@ -543,7 +543,7 @@ If The name is not known, an error is signalled.")
     "Returns the compression method name for the given ID.
 
 The name should be one of
-  NIL
+  :store
   :shrink
   :reduce-1
   :reduce-2

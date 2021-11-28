@@ -19,6 +19,9 @@
 (defmethod make-decompression-state ((format (eql NIL)) &key buffer)
   NIL)
 
+(defmethod make-decompression-state ((format (eql :store)) &key buffer)
+  NIL)
+
 (defmethod call-with-decompressed-buffer (function input start end (state (eql NIL)))
   (funcall function input start end))
 
@@ -35,6 +38,9 @@
                   (3bz:replace-output-buffer state (3bz::ds-output-buffer state))))))
 
 (defmethod make-compression-state ((format (eql NIL)) &key buffer)
+  NIL)
+
+(defmethod make-compression-state ((format (eql :store)) &key buffer)
   NIL)
 
 (defmethod call-with-compressed-buffer (function vector start end (state null))

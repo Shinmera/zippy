@@ -38,7 +38,7 @@
       (error "Unknown file attribute ~a" name)))
 
 (defparameter *compression-method-map*
-  (alist-vector '((0 . NIL)
+  (alist-vector '((0 . :store)
                   (1 . :shrink)
                   (2 . :reduce-1)
                   (3 . :reduce-2)
