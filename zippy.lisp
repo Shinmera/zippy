@@ -8,7 +8,7 @@
 
 (defclass zip-file ()
   ((entries :initarg :entries :initform (make-array 0 :adjustable T :fill-pointer T) :accessor entries)
-   (disks :initarg :disks :accessor disks)
+   (disks :initarg :disks :initform NIL :accessor disks)
    (comment :initform NIL :initarg :comment :accessor comment)))
 
 (defmethod close ((file zip-file) &key abort)
