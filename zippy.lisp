@@ -7,7 +7,7 @@
 (in-package #:org.shirakumo.zippy)
 
 (defclass zip-file ()
-  ((entries :initarg :entries :accessor entries)
+  ((entries :initarg :entries :initform (make-array 0 :adjustable T :fill-pointer T) :accessor entries)
    (disks :initarg :disks :accessor disks)
    (comment :initform NIL :initarg :comment :accessor comment)))
 
