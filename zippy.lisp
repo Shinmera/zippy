@@ -120,7 +120,7 @@
        (make-instance 'zip-file :entries entries :comment "Created with Zippy")))
     ((or vector stream)
      (let ((entries (make-array 1)))
-       (setf (aref entries 0) (make-instance 'zip-file :content file :file-name "-"))
+       (setf (aref entries 0) (make-instance 'zip-entry :content file :file-name "-"))
        (make-instance 'zip-file :entries entries :comment "Created with Zippy")))
     (zip-file
      file)))
