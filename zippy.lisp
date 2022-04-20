@@ -54,7 +54,8 @@
                                :element-type '(unsigned-byte 8)
                                :if-exists if-exists)
     (flet ((output (buffer start end)
-             (write-sequence buffer stream :start start :end end)))
+             (write-sequence buffer stream :start start :end end)
+             end))
       (decode-entry #'output entry :password password)))
   (when (and restore-attributes
              (eql *compatibility* (second (attributes entry))))
@@ -63,7 +64,8 @@
 
 (defun entry-to-stream (stream entry &key password)
   (flet ((output (buffer start end)
-           (write-sequence buffer stream :start start :end end)))
+           (write-sequence buffer stream :start start :end end)
+           end))
     (decode-entry #'output entry :password password)))
 
 (defun entry-to-vector (entry &key vector (start 0) password)
@@ -75,11 +77,13 @@
              #+sbcl
              (sb-sys:with-pinned-objects (vector buffer)
                (sb-kernel:system-area-ub8-copy (sb-sys:vector-sap buffer) start (sb-sys:vector-sap vector) i (- end start))
-               (incf i (- end start))))
+               (incf i (- end start))
+               end))
            (slow-copy (buffer start end)
              (loop for j from start below end
                    do (setf (aref vector i) (aref buffer j))
-                      (incf i))))
+                      (incf i))
+             end))
       (if #+sbcl (typep vector 'sb-kernel:simple-unboxed-array)
           #-sbcl NIL
           (decode-entry #'fast-copy entry :password password)

@@ -237,3 +237,36 @@ one."))
     (flet ((decompress (buffer start end)
              (call-with-decompressed-buffer function buffer start end decompression-state)))
       (call-with-decrypted-buffer #'decompress input (size entry) decryption-state))))
+
+(defstruct (chunk-decoder
+            (:constructor %make-chunk-decoder (input size decryption-state decompression-state buffer start end)))
+  input
+  size
+  decryption-state
+  decompression-state
+  buffer
+  start
+  end)
+
+(defun make-chunk-decoder (entry &key password)
+  (let* ((input (prepare-reading entry))
+         (decryption-state (apply #'make-decryption-state (first (encryption-method entry)) input password (rest (encryption-method entry))))
+         (decompression-state (make-decompression-state (compression-method entry))))
+    (%make-chunk-decoder input (size entry) decryption-state decompression-state NIL 0 0)))
+
+(defun decode-chunk (decoder output start end)
+  (let ((decompression-state (chunk-decoder-decompression-state decoder))
+        (decryption-state (chunk-decoder-decryption-state decoder))
+        (input (chunk-decoder-input decoder))
+        (size (chunk-decoder-size decoder)))
+    (labels ((decode (buffer bstart bend)
+               (let* ((available (- bend bstart))
+                      (copyable (min (- end start) available)))
+                 (loop for i from 0 below copyable
+                       do (setf (aref output (+ start i)) (aref buffer (+ bstart i))))
+                 (incf start copyable)
+                 (+ bstart copyable)))
+             (decompress (buffer start end)
+               (call-with-decompressed-buffer #'decode buffer start end decompression-state)))
+      (loop until (= 0 (call-with-decrypted-buffer #'decompress input size decryption-state))))
+    (min start end)))
