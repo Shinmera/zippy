@@ -58,9 +58,10 @@
 
 (defmethod call-with-decrypted-buffer (function (input vector-input) length state)
   (let* ((start (vector-input-index input))
-         (read (funcall function (vector-input-vector input) (+ start (vector-decryption-state-consumed state)) (+ start length))))
-    (setf (vector-decryption-state-consumed state) (- read start))
-    (- length (vector-decryption-state-consumed state))))
+         (offset (+ start (vector-decryption-state-consumed state)))
+         (read (funcall function (vector-input-vector input) offset (+ start length))))
+    (prog1 (- read offset)
+      (setf (vector-decryption-state-consumed state) (- read start)))))
 
 (defmethod make-encryption-state ((format (eql NIL)) password &key buffer)
   NIL)
