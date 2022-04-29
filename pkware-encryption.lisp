@@ -59,7 +59,10 @@
                  do (update-pkware-state state decrypted)
                     (setf (aref buffer i) (ldb (byte 8 0) decrypted)))
            (decf length read)
-           (funcall function buffer 0 read)))
+           ;; FIXME: does not work correctly.
+           (let ((consumed (funcall function buffer 0 read)))
+             (when (< consumed read)
+               (return read)))))
 
 (defmethod call-with-decrypted-buffer (function (input vector-input) length (state pkware-decrypt-state))
   (loop with inbuffer = (vector-input-vector input)
@@ -74,4 +77,7 @@
                     (setf (aref buffer i) decrypted)
                     (incf index))
            (decf length read)
-           (funcall function buffer 0 read)))
+           ;; FIXME: does not work correctly.
+           (let ((consumed (funcall function buffer 0 read)))
+             (when (< consumed read)
+               (return read)))))

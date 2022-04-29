@@ -104,6 +104,7 @@
    #:entries
    #:disks
    #:comment
+   #:move-in-memory
    #:zip-entry
    #:zip-file
    #:version

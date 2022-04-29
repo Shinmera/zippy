@@ -64,7 +64,8 @@
    (if (and (consp (encryption-method entry))
             (find (first (encryption-method entry)) '(:ae-1 :ae-2)))
        :ae-x
-       (compression-method entry))))
+       (or (compression-method entry)
+           :store))))
 
 (defun add-extra-entry (extra entry)
   (let ((end (length extra)))
@@ -172,7 +173,7 @@
              (setf (crc-32 entry) (logxor #xFFFFFFFF crc))
              (setf (size entry) written)
              (setf (uncompressed-size entry) read))))
-        ((offset entry)
+        ((and (offset entry) (size entry))
          ;; We are copying from source archive. Just transfer the bytes.
          (labels ((write-out (buffer start end)
                     (output output buffer start end)))

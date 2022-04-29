@@ -28,6 +28,19 @@
         (vector-input (format stream "[VECTOR]"))
         (null (format stream "CLOSED"))))))
 
+(defun move-in-memory (file)
+  (when (disks file)
+    (loop for i from 0 below (length (disks file))
+          for disk = (aref (disks file) i)
+          do (when (streamp disk)
+               (unless (open-stream-p disk)
+                 (error "Can't move closed stream in-memory."))
+               (file-position disk 0)
+               (let ((buffer (make-array (file-length disk) :element-type '(unsigned-byte 8))))
+                 (read-sequence buffer disk)
+                 (setf (aref (disks file) i) (make-vector-input buffer 0 0 (length buffer)))
+                 (close disk))))))
+
 (defclass zip-entry ()
   ((zip-file :initarg :zip-file :initform NIL :accessor zip-file)
    (crc-32 :initform NIL :accessor crc-32)
@@ -54,7 +67,8 @@
                                :element-type '(unsigned-byte 8)
                                :if-exists if-exists)
     (flet ((output (buffer start end)
-             (write-sequence buffer stream :start start :end end)))
+             (write-sequence buffer stream :start start :end end)
+             end))
       (decode-entry #'output entry :password password)))
   (when (and restore-attributes
              (eql *compatibility* (second (attributes entry))))
@@ -63,7 +77,8 @@
 
 (defun entry-to-stream (stream entry &key password)
   (flet ((output (buffer start end)
-           (write-sequence buffer stream :start start :end end)))
+           (write-sequence buffer stream :start start :end end)
+           end))
     (decode-entry #'output entry :password password)))
 
 (defun entry-to-vector (entry &key vector (start 0) password)
@@ -75,11 +90,13 @@
              #+sbcl
              (sb-sys:with-pinned-objects (vector buffer)
                (sb-kernel:system-area-ub8-copy (sb-sys:vector-sap buffer) start (sb-sys:vector-sap vector) i (- end start))
-               (incf i (- end start))))
+               (incf i (- end start))
+               end))
            (slow-copy (buffer start end)
              (loop for j from start below end
                    do (setf (aref vector i) (aref buffer j))
-                      (incf i))))
+                      (incf i))
+             end))
       (if #+sbcl (typep vector 'sb-kernel:simple-unboxed-array)
           #-sbcl NIL
           (decode-entry #'fast-copy entry :password password)

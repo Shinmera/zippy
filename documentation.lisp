@@ -25,6 +25,9 @@ The function is called with three arguments:
   An octet buffer with the decompressed data
   A start index to the beginning of valid data
   An end index to the end of valid data
+It must return an integer indicating the last index that was consumed
+in the octet buffer. If the index is the same as START, DECODE-ENTRY
+will return.
 
 The supplied STATE must be a state obtained through
 MAKE-DECOMPRESSION-STATE. The VECTOR, START, and END supply the octets
@@ -33,6 +36,11 @@ to decompress.
 You may call this function repeatedly with new input to decompress
 until the full region has been processed. The supplied function
 likewise may be called multiple times per decompression run.
+
+This function returns how much of the supplied buffer has been
+consumed. If the function return START, it should not be called
+again until external circumstances allow the inner function to
+continue.
 
 See MAKE-DECOMPRESSION-STATE")
   
@@ -163,6 +171,9 @@ FUNCTION will be called repeatedly with three arguments:
   An octet buffer with the raw data
   A start index to the beginning of valid data
   An end index to the end of valid data
+It must return an integer indicating the last index that was consumed
+in the octet buffer. If the index is the same as START, DECODE-ENTRY
+will return with a value greater than zero.
 
 PASSWORD should be supplied if the entry is encrypted. If the entry is
 encrypted, but no password is supplied, or the password is detectably
@@ -232,6 +243,9 @@ The function is called with three arguments:
   An octet buffer with the decrypted data
   A start index to the beginning of valid data
   An end index to the end of valid data
+It must return an integer indicating the last index that was consumed
+in the octet buffer. If the index is the same as START, DECODE-ENTRY
+will return.
 
 The supplied STATE must be a state obtained through
 MAKE-DECRPTIION-STATE. The VECTOR, START, and END supply the octets
@@ -240,6 +254,11 @@ to decrypt.
 You may call this function repeatedly with new input to decrypt
 until the full region has been processed. The supplied function
 likewise may be called multiple times per decryption run.
+
+This function returns how much of the supplied buffer has been
+consumed. If the function return START, it should not be called
+again until external circumstances allow the inner function to
+continue.
 
 See MAKE-DECRYPTION-STATE")
   
@@ -633,6 +652,14 @@ See IO")
 
 See ZIP-FILE
 See ZIP-ENTRY")
+
+  (function move-in-memory
+    "Moves the zip archive into memory. This will be far faster for repeat access and decompression.
+
+Does nothing if the file is already in-memory.
+Signals an error if any of the disks are closed streams.
+
+See ZIP-FILE")
   
   (type zip-entry
     "Representation of a file entry in a zip archive.
