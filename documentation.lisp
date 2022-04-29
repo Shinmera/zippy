@@ -633,6 +633,14 @@ See IO")
 
 See ZIP-FILE
 See ZIP-ENTRY")
+
+  (function move-in-memory
+    "Moves the zip archive into memory. This will be far faster for repeat access and decompression.
+
+Does nothing if the file is already in-memory.
+Signals an error if any of the disks are closed streams.
+
+See ZIP-FILE")
   
   (type zip-entry
     "Representation of a file entry in a zip archive.
