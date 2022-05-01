@@ -74,40 +74,40 @@
     extra))
 
 (defun entry-to-lf (entry)
-  (multiple-value-bind (date time) (encode-msdos-timestamp (last-modified entry))
-    (let ((file-name (babel:string-to-octets (file-name entry) :encoding :utf-8))
-          (extra (make-array 0 :adjustable T :element-type '(unsigned-byte 8))))
-      (when (and (size entry) (<= #xFFFFFFFF (size entry)))
-        (add-extra-entry extra (make-zip64-extended-information
-                                28 (size entry) (uncompressed-size entry)
-                                (offset entry) 0)))
-      (destructuring-bind (&optional method bittage) (enlist (encryption-method entry))
-        (case method
-          (:ae-1
-           (add-extra-entry extra (make-aes-extra-data
-                                   7 17729 1
-                                   (ecase bittage
-                                     (128 1)
-                                     (192 2)
-                                     (256 3))
-                                   (compression-method-id (compression-method entry)))))
-          (:ae-2
-           (add-extra-entry extra (make-aes-extra-data
-                                   7 17729 2
-                                   (ecase bittage
-                                     (128 1)
-                                     (192 2)
-                                     (256 3))
-                                   (compression-method-id (compression-method entry)))))
-          ((:pkware NIL))
-          (T
-           (add-extra-entry extra (make-encryption-header
-                                   8 2 (encryption-method-id method)
-                                   bittage 1 #())))))
+  (let ((file-name (babel:string-to-octets (file-name entry) :encoding :utf-8))
+        (extra (make-array 0 :adjustable T :element-type '(unsigned-byte 8))))
+    (when (and (size entry) (<= #xFFFFFFFF (size entry)))
+      (add-extra-entry extra (make-zip64-extended-information
+                              28 (size entry) (uncompressed-size entry)
+                              (offset entry) 0)))
+    (destructuring-bind (&optional method bittage) (enlist (encryption-method entry))
+      (case method
+        (:ae-1
+         (add-extra-entry extra (make-aes-extra-data
+                                 7 17729 1
+                                 (ecase bittage
+                                   (128 1)
+                                   (192 2)
+                                   (256 3))
+                                 (compression-method-id (compression-method entry)))))
+        (:ae-2
+         (add-extra-entry extra (make-aes-extra-data
+                                 7 17729 2
+                                 (ecase bittage
+                                   (128 1)
+                                   (192 2)
+                                   (256 3))
+                                 (compression-method-id (compression-method entry)))))
+        ((:pkware NIL))
+        (T
+         (add-extra-entry extra (make-encryption-header
+                                 8 2 (encryption-method-id method)
+                                 bittage 1 #())))))
+    (multiple-value-bind (date time) (encode-msdos-timestamp (last-modified entry))
       (make-local-file (entry-version entry)
                        (entry-flags entry)
                        (entry-compression-id entry)
-                       date time (or (crc-32 entry) 0)
+                       time date (or (crc-32 entry) 0)
                        (if (size entry) (cap (size entry) 32) 0)
                        (if (uncompressed-size entry) (cap (uncompressed-size entry) 32) 0)
                        (length file-name) (length extra) file-name extra))))
@@ -118,21 +118,21 @@
       (make-data-descriptor/64 (crc-32 entry) (size entry) (uncompressed-size entry))))
 
 (defun entry-to-cd (entry)
-  (multiple-value-bind (date time) (encode-msdos-timestamp (last-modified entry))
-    (let ((file-name (babel:string-to-octets (file-name entry) :encoding :utf-8))
-          (comment (encode-string (comment entry)))
-          (extra (make-array 0 :adjustable T :element-type '(unsigned-byte 8))))
-      (when (or (<= #xFFFFFFFF (size entry))
-                (<= #xFFFFFFFF (offset entry)))
-        (add-extra-entry extra (make-zip64-extended-information
-                                28 (size entry) (uncompressed-size entry)
-                                (offset entry) 0)))
+  (let ((file-name (babel:string-to-octets (file-name entry) :encoding :utf-8))
+        (comment (encode-string (comment entry)))
+        (extra (make-array 0 :adjustable T :element-type '(unsigned-byte 8))))
+    (when (or (<= #xFFFFFFFF (size entry))
+              (<= #xFFFFFFFF (offset entry)))
+      (add-extra-entry extra (make-zip64-extended-information
+                              28 (size entry) (uncompressed-size entry)
+                              (offset entry) 0)))
+    (multiple-value-bind (date time) (encode-msdos-timestamp (last-modified entry))
       (make-central-directory-entry
        (entry-version entry)
        (entry-version entry)
        (entry-flags entry)
        (entry-compression-id entry)
-       date time (or (crc-32 entry) 0)
+       time date (or (crc-32 entry) 0)
        (if (size entry) (cap (size entry) 32) 0)
        (if (uncompressed-size entry) (cap (uncompressed-size entry) 32) 0)
        (length file-name) (length extra) (length comment)
