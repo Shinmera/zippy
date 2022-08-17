@@ -111,7 +111,7 @@
   (etypecase file
     (zip-file
      (loop for entry across (entries file)
-           for full-path = (merge-pathnames (file-name entry) path)
+           for full-path = (merge-pathnames (pathname-utils:parse-native-namestring (file-name entry)) path)
            do (ensure-directories-exist full-path)
               (unless (getf (first (attributes entry)) :directory)
                 (entry-to-file full-path entry :if-exists if-exists :password password))))
