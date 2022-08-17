@@ -107,11 +107,21 @@
 (defmacro with-zip-file ((file input &key (start 0) end) &body body)
   `(call-with-input-zip-file (lambda (,file) ,@body) ,input :start ,start :end ,end))
 
+(defun clean-file-name (file-name)
+  "Correct characters with wildcard meaning"
+  (with-output-to-string (out)
+    (loop for ch across file-name do
+          ;;SBCL can interpret square brackets similar to perl regex,
+          ;;therefore square bracket needs to be escaped
+          (if (equal ch #\[)
+              (write-string "\\[" out)
+              (write-char ch out)))))
+
 (defun extract-zip (file path &key (if-exists :error) password)
   (etypecase file
     (zip-file
      (loop for entry across (entries file)
-           for full-path = (merge-pathnames (file-name entry) path)
+           for full-path = (merge-pathnames (clean-file-name (file-name entry)) path)
            do (ensure-directories-exist full-path)
               (unless (getf (first (attributes entry)) :directory)
                 (entry-to-file full-path entry :if-exists if-exists :password password))))
