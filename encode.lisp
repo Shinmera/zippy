@@ -54,7 +54,7 @@
           (setf (compression-method entry) :store)))))
 
 (defun entry-version (entry)
-  (encode-version (or (version entry) *version*)
+  (encode-version (or (version entry) *default-version-needed*)
                   (if (consp (attributes entry))
                       (second (attributes entry))
                       *compatibility*)))
@@ -183,7 +183,9 @@
          (setf (size entry) 0)
          (setf (uncompressed-size entry) 0))))
 
-(defun encode-file (zip-file output &key password)
+(defun encode-file (zip-file output &key password
+                                         (version-made *default-version-made*)
+                                         (version-needed *default-version-needed*))
   (loop for i from 0
         for entry across (entries zip-file)
         do (setf (offset entry) (index output))
@@ -202,9 +204,9 @@
           (comment (encode-string (comment zip-file))))
       (write-structure* (make-end-of-central-directory/64
                          44
-                         (encode-version *version*)
+                         (encode-version version-made
                          ;; FIXME: be smarter about noting the min version.
-                         (encode-version *version*)
+                         (encode-version version-needed
                          0 0 (length (entries zip-file)) (length (entries zip-file))
                          (- cd-end cd-start) cd-start #())
                         output)

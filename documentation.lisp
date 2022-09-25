@@ -193,9 +193,14 @@ See ARCHIVE-FILE-REQUIRED"))
 
 ;; encode.lisp
 (docs:define-docs
-  (variable *version*
-    "The max zip file version supported by this library.")
-  
+  (variable *default-version-made*
+    "Default archive creation software version to be stored in produced
+archives.")
+
+  (variable *default-version-needed*
+    "Default required archive reader software version to be stored in
+produced archives.")
+
   (variable *compatibility*
     "The default file attribute compatibility flag.")
 

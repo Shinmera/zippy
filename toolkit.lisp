@@ -6,8 +6,11 @@
 
 (in-package #:org.shirakumo.zippy)
 
-(defvar *version*
+(defvar *default-version-made*
   '(4 5))
+
+(defvar *default-version-needed*
+  '(2 0))
 
 (defvar *compatibility*
   #+windows :ntfs
