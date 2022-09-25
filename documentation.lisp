@@ -17,7 +17,7 @@ for a default buffer, an octet vector, or an integer for an octet
 vector of the given size.
 
 See CALL-WITH-DECOMPRESSED-BUFFER")
-  
+
   (function call-with-decompressed-buffer
     "Call the supplied function with a decompressed buffer.
 
@@ -43,7 +43,7 @@ again until external circumstances allow the inner function to
 continue.
 
 See MAKE-DECOMPRESSION-STATE")
-  
+
   (function make-compression-state
     "Create the state necessary to compress given the requested compression format.
 
@@ -54,7 +54,7 @@ vector of the given size.
 
 See CALL-WITH-COMPRESSED-BUFFER
 See CALL-WITH-COMPLETED-COMPRESSED-BUFFER")
-  
+
   (function call-with-compressed-buffer
     "Call the supplied function with a compressed buffer.
 
@@ -106,7 +106,7 @@ data of the requested DISK.
 See DISK
 See DECODE-FILE
 See DECODE-ENTRY")
-  
+
   (function with-zip-file
     "Open a zip file lexically and cleans up on exit.
 
@@ -163,7 +163,7 @@ See DECODE-FILE
 See DECODE-ENTRY
 See ARCHIVE-FILE-REQUIRED
 See WITH-ZIP-FILE")
-  
+
   (function decode-entry
     "Decode the data payload of the ZIP-ENTRY
 
@@ -235,7 +235,7 @@ The given password may be a string or octet vector supplying the
 password for decryption.
 
 See CALL-WITH-DECRYPTED-BUFFER")
-  
+
   (function call-with-decrypted-buffer
     "Call the supplied function with a decrypted buffer.
 
@@ -261,7 +261,7 @@ again until external circumstances allow the inner function to
 continue.
 
 See MAKE-DECRYPTION-STATE")
-  
+
   (function make-encryption-state
     "Create the state necessary to encrypt given the requested encryption format.
 
@@ -272,7 +272,7 @@ vector of the given size.
 
 See CALL-WITH-ENCRYPTED-BUFFER
 See CALL-WITH-COMPLETED-ENCRYPTED-BUFFER")
-  
+
   (function call-with-encrypted-buffer
     "Call the supplied function with an encrypted buffer.
 
@@ -337,7 +337,7 @@ See PARSE-STRUCTURE*
 See WRITE-STRUCTURE*
 See PARSE-STRUCTURE
 See WITH-IO")
-  
+
   (type vector-input
     "Representation of vector input/output state.
 
@@ -345,12 +345,12 @@ See VECTOR-INPUT-VECTOR
 See VECTOR-INPUT-INDEX
 See VECTOR-INPUT-START
 See VECTOR-INPUT-END")
-  
+
   (function vector-input-vector
     "Returns the vector the vector-input is backing.
 
 See VECTOR-INPUT")
-  
+
   (function vector-input-index
     "Accesses the current index into the vector.
 
@@ -365,19 +365,19 @@ See VECTOR-INPUT")
     "Returns the ending index of the vector.
 
 See VECTOR-INPUT")
-  
+
   (function seek
     "Seek the io to the requested index.
 
 If the index is outside the allowed ranges, an error is signalled.
 
 See IO")
-  
+
   (function has-more
     "Returns whether the io has input left to read, or space left to write to.
 
 See IO")
-  
+
   (function index
     "Returns the current index into the IO.
 
@@ -394,7 +394,7 @@ See IO")
     "Returns the ending index of the IO.
 
 See IO")
-  
+
   (function size
     "Returns the size of the object in octets.
 
@@ -403,14 +403,14 @@ they are in the archive.
 
 See ZIP-ENTRY
 See IO")
-  
+
   (function ub32
     "Reads a 32 bit unsigned integer from the IO and returns it.
 
 This will advance the IO index.
 
 See IO")
-  
+
   (function output
     "Writes the given array of octets to the IO.
 
@@ -418,7 +418,7 @@ If the IO does not have sufficient space available, an error is
 signalled.
 
 See IO")
-  
+
   (function parse-structure*
     "Parses a structure from the IO assuming a leading 32 bit signature.
 
@@ -428,21 +428,21 @@ signalled. Otherwise, the parsed structure instance is returned.
 This advances the IO index.
 
 See IO")
-  
+
   (function write-structure*
     "Writes the given structure to the IO.
 
 This advances the IO index.
 
 See IO")
-  
+
   (function parse-structure
     "Parse the given structure type from the IO.
 
 This advances the IO index.
 
 See IO")
-  
+
   (function with-io
     "Wraps TARGET in an appropriate IO context.
 
@@ -462,26 +462,26 @@ A signature is expected at the input position. If no signature
 is available, or if it is not recognised, an error is signalled.
 
 Returns the structure instance and the ending index.")
-  
+
   (function read-structure
     "Decodes a structure from the given stream.
 
 A signature is expected at the input position. If no signature
-is available, or if it is not recognised, an error is signalled. 
+is available, or if it is not recognised, an error is signalled.
 Returns the structure instance otherwise.")
-  
+
   (function encode-structure
     "Encodes the given structure to the vector at the given starting position.
 
 This will encode it including its signature, if any.
 
 Returns the ending index.")
-  
+
   (function write-structure
     "Encodes the given structure to the stream.
 
 This will encode it including its signature, if any.")
-  
+
   (function define-byte-structure
     "Define a new byte-coded structure.
 
@@ -552,12 +552,12 @@ The name should be one of
   :darwin
 
 If the ID is not known, an error is signalled.")
-  
+
   (function file-attribute-id
     "Returns the file attribute ID for the given name.
 
 If The name is not known, an error is signalled.")
-  
+
   (function compression-method-name
     "Returns the compression method name for the given ID.
 
@@ -589,12 +589,12 @@ The name should be one of
   :ae-x
 
 If the ID is not known, an error is signalled.")
-  
+
   (function compression-method-id
     "Returns the compression method ID for the given name.
 
 If The name is not known, an error is signalled.")
-  
+
   (function encryption-method-name
     "Returns the encryption method name for the given ID.
 
@@ -603,9 +603,9 @@ The name should be one of
   :rc2
   :3des-168
   :3des-112
-  :aes-128 
-  :aes-192 
-  :aes-256 
+  :aes-128
+  :aes-192
+  :aes-256
   :rc2
   :blowfish
   :twofish
@@ -613,7 +613,7 @@ The name should be one of
   :unknown
 
 If the ID is not known, an error is signalled.")
-  
+
   (function encryption-method-id
     "Returns the encryption method ID for the given name.
 
@@ -632,13 +632,13 @@ See DISKS
 See COMMENT
 See DECODE-FILE
 See CL:CLOSE")
-  
+
   (function entries
     "Accessor to the vector of zip-entry instances for the zip-file.
 
 See ZIP-FILE
 See ZIP-ENTRY")
-  
+
   (function disks
     "Accessor to the vector of IO instances representing the zip-file's disks.
 
@@ -646,7 +646,7 @@ This vector is managed automatically.
 
 See ZIP-FILE
 See IO")
-  
+
   (function comment
     "Accessor to the comment of the zip-file or entry.
 
@@ -660,7 +660,7 @@ Does nothing if the file is already in-memory.
 Signals an error if any of the disks are closed streams.
 
 See ZIP-FILE")
-  
+
   (type zip-entry
     "Representation of a file entry in a zip archive.
 
@@ -682,13 +682,13 @@ See LAST-MODIFIED
 See FILE-NAME
 See COMMENT
 See CONTENT")
-  
+
   (function zip-file
     "Returns the zip-file instance this entry is a part of.
 
 See ZIP-ENTRY
 See ZIP-FILE")
-  
+
   (function version
     "Returns the Zip file version needed to extract this entry.
 
@@ -697,7 +697,7 @@ The version is a list of two integers.
 This slot should not be set by the user.
 
 See ZIP-ENTRY")
-  
+
   (function attributes
     "Accesses the file attributes.
 
@@ -711,7 +711,7 @@ automatically when the entry is encoded.
 See FILE-ATTRIBUTE-NAME
 See ZIP-ENTRY
 See ORG.SHIRAKUMO.FILE-ATTRIBUTES:PERMISSIONS")
-  
+
   (function encryption-method
     "Accesses the encryption method used to encrypt the file contents.
 
@@ -722,7 +722,7 @@ Additionally to the names listed in ENCRYPTION-METHOD-NAME, the names
 
 See ENCRYPTION-METHOD-NAME
 See ZIP-ENTRY")
-  
+
   (function compression-method
     "Accesses the compression method used to compress the file
     contents.
@@ -731,14 +731,14 @@ This should either be NIL or a keyword naming the compression method.
 
 See COMPRESSION-METHOD-NAME
 See ZIP-ENTRY")
-  
+
   (function crc-32
     "Accesses the CRC-32 checksum of the file contents.
 
 This is computed and set automatically when the entry is encoded.
 
 See ZIP-ENTRY")
-  
+
   (function disk
     "Accesses the disk ID on which the contents of this file start.
 
@@ -746,7 +746,7 @@ This slot should not be set by the user.
 
 See OFFSET
 See ZIP-ENTRY")
-  
+
   (function offset
     "Accesses the octet index at which the contents of this file start
     on its disk.
@@ -755,7 +755,7 @@ This slot should not be set by the user.
 
 See DISK
 See ZIP-ENTRY")
-  
+
   (function uncompressed-size
     "Accesses the octet size of the entry's uncompressed data payload.
 
@@ -763,14 +763,14 @@ If unset, this slot is automatically computed when the entry is
 encoded.
 
 See ZIP-ENTRY")
-  
+
   (function extra-fields
     "Accesses the list of extra data structures for the entry.
 
 This slot should not be set by the user.
 
 See ZIP-ENTRY")
-  
+
   (function last-modified
     "Accesses the universal time designating the last time the entry's contents were modified.
 
@@ -778,7 +778,7 @@ If unset, and the entry is backed by a file, this slot is
 automatically computed when the entry is encoded.
 
 See ZIP-ENTRY")
-  
+
   (function file-name
     "Accesses the relative path designating where the file belongs on a hirearchical file system.
 
@@ -790,7 +790,7 @@ The path must be relative, and must use forward slashes as the
 directory separator.
 
 See ZIP-ENTRY")
-  
+
   (function content
     "Accesses the backing content of the file.
 
@@ -800,7 +800,7 @@ from disk, an octet input-stream, an octet vector, or an IO instance.
 
 See IO
 See ZIP-ENTRY")
-  
+
   (function entry-to-file
     "Decodes the contents of the entry to the given path.
 
@@ -825,7 +825,7 @@ must be at least START+(UNCOMPRESSED-SIZE ENTRY) big.
 
 See DECODE-ENTRY
 See ZIP-ENTRY")
-  
+
   (function extract-zip
     "Extracts the contents of the zip file to the given directory.
 
@@ -835,7 +835,7 @@ PATH should be a directory pathname designator.
 See ZIP-FILE
 See ENTRY-TO-FILE
 See WITH-ZIP-FILE")
-  
+
   (function compress-zip
     "Compresses the contents of the zip file to the given output.
 
