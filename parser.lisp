@@ -240,6 +240,7 @@
     (list major minor)))
 
 (defun encode-version (version &optional compatibility)
+  (check-type version (cons (integer 0 9) (cons (integer 0 9) null)))
   (let ((idx (etypecase compatibility
                (null 0)
                (integer compatibility)
