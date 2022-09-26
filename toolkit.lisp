@@ -12,6 +12,12 @@
 (defvar *default-version-needed*
   '(2 0))
 
+(defun version< (version1 version2)
+  (destructuring-bind (major1 minor1) version1
+    (destructuring-bind (major2 minor2) version2
+      (or (< major1 major2)
+          (and (= major1 major2) (< minor1 minor2))))))
+
 (defvar *compatibility*
   #+windows :ntfs
   #+darwin :darwin
