@@ -26,7 +26,7 @@
   (let ((parser (or (gethash (type-of structure) *structures*)
                     (error "Don't know how to serialise a structure of type~%  ~a"
                            (type-of structure)))))
-    (funcall (third parser) vector index)))
+    (funcall (third parser) structure vector index)))
 
 (defun write-structure (structure stream)
   (let ((parser (or (gethash (type-of structure) *structures*)
@@ -71,10 +71,14 @@
 
 (defun binary-type-encoder (type)
   (ecase type
-    (ub8 'aref)
-    (ub16 'nibbles::ub16set/le)
-    (ub32 'nibbles::ub32set/le)
-    (ub64 'nibbles::ub64set/le)))
+    (ub8 '(lambda (vector index value)
+            (setf (aref vector index) value)))
+    (ub16 '(lambda (vector index value)
+             (setf (nibbles::ub16ref/le vector index) value)))
+    (ub32 '(lambda (vector index value)
+             (setf (nibbles::ub32ref/le vector index) value)))
+    (ub64 '(lambda (vector index value)
+             (setf (nibbles::ub64ref/le vector index) value)))))
 
 (defun binary-type-writer (type)
   (ecase type
@@ -133,10 +137,12 @@
                `(let ((vec (babel:string-to-octets ,name :encoding :utf-8)))
                   (loop for char across vec
                         do (setf (aref ,vector ,index) char)
-                           (incf ,index)))
+                           (incf ,index)
+                        finally (return ,index)))
                `(loop for i from 0 below ,count
                       do (,(binary-type-encoder type) ,vector ,index (aref ,name i))
-                         (incf ,index ,(binary-type-size type)))))
+                         (incf ,index ,(binary-type-size type))
+                      finally (return ,index))))
           (T
            `(progn (,(binary-type-encoder type) ,vector ,index ,name)
                    (incf ,index ,(binary-type-size type)))))))
@@ -182,10 +188,10 @@
          (defun ,encode-name (structure vector index)
            ,@(typecase signature
                ((unsigned-byte 16)
-                `((nibbles::ub16set/le vector index ,signature)
+                `((setf (nibbles:ub16ref/le vector index) ,signature)
                   (incf index 2)))
                ((unsigned-byte 32)
-                `((nibbles::ub32set/le vector index ,signature)
+                `((setf (nibbles:ub32ref/le vector index) ,signature)
                   (incf index 4))))
            (with-slots ,fields structure
              ,@(loop for record in records
