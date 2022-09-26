@@ -202,9 +202,15 @@
          (setf (size entry) 0)
          (setf (uncompressed-size entry) 0))))
 
+(defun determine-min-version (zip64-used)
+  ;; FIXME: be smarter about noting the min version based on other used features.
+  (if zip64-used
+      '(4 5)
+      '(2 0)))
+
 (defun encode-file (zip-file output &key password
                                          (version-made *default-version-made*)
-                                         (version-needed *default-version-needed*)
+                                         version-needed
                                          (zip64 :when-needed))
   (check-type zip64 (member NIL T :when-needed))
   (let ((*zip64-needed* NIL))
@@ -235,13 +241,20 @@
                     (cap-and-note-zip64 entry-count 16)
                     (cap (- cd-end cd-start) 32)
                     (cap cd-start 32)
-                    (length comment) comment)))
-        (cond ((or (eq zip64 T)
-                   (and (eq zip64 :when-needed) *zip64-needed*))
+                    (length comment) comment))
+             (use-zip64-p (or (eq zip64 T)
+                              (and (eq zip64 :when-needed) *zip64-needed*)))
+             (min-version (determine-min-version use-zip64-p)))
+        (cond ((not version-needed)
+               (setf version-needed min-version))
+              ((version< version-needed min-version)
+               (error "~@<The specified version needed for extracting the archive is ~S which ~
+                       is less than the actually needed version which is ~S.~@:>"
+                      version-needed min-version)))
+        (cond (use-zip64-p
                (write-structure* (make-end-of-central-directory/64
                                   44
                                   (encode-version version-made)
-                                  ;; FIXME: be smarter about noting the min version.
                                   (encode-version version-needed)
                                   0 0 entry-count entry-count
                                   (- cd-end cd-start) cd-start #())
