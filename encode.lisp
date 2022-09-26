@@ -6,6 +6,22 @@
 
 (in-package #:org.shirakumo.zippy)
 
+(defvar *zip64-needed*)
+
+(defun n-bit-and-note-zip64-p (bits &rest integers)
+  (cond ((apply #'n-bit-p bits integers))
+        (T
+         (setf *zip64-needed* T)
+         nil)))
+
+(defun cap-and-note-zip64 (value bits)
+  (let ((max (1- (ash 1 bits))))
+    (cond ((< value max)
+           value)
+          (T
+           (setf *zip64-needed* T)
+           max))))
+
 (defun entry-flags (entry)
   (bitfield (encryption-method entry)
             NIL
@@ -75,10 +91,12 @@
 
 (defun entry-to-lf (entry)
   (let ((file-name (babel:string-to-octets (file-name entry) :encoding :utf-8))
-        (extra (make-array 0 :adjustable T :element-type '(unsigned-byte 8))))
-    (when (and (size entry) (<= #xFFFFFFFF (size entry)))
+        (extra (make-array 0 :adjustable T :element-type '(unsigned-byte 8)))
+        (size (or (size entry) 0))
+        (uncompressed-size (or (uncompressed-size entry) 0)))
+    (when (not (n-bit-and-note-zip64-p 32 size))
       (add-extra-entry extra (make-zip64-extended-information
-                              28 (size entry) (uncompressed-size entry)
+                              28 size uncompressed-size
                               (offset entry) 0)))
     (destructuring-bind (&optional method bittage) (enlist (encryption-method entry))
       (case method
@@ -108,24 +126,26 @@
                        (entry-flags entry)
                        (entry-compression-id entry)
                        time date (or (crc-32 entry) 0)
-                       (if (size entry) (cap (size entry) 32) 0)
-                       (if (uncompressed-size entry) (cap (uncompressed-size entry) 32) 0)
+                       (cap size 32) (cap uncompressed-size 32)
                        (length file-name) (length extra) file-name extra))))
 
 (defun entry-to-dd (entry)
-  (if (< (uncompressed-size entry) #xFFFFFFFF)
-      (make-data-descriptor (crc-32 entry) (size entry) (uncompressed-size entry))
-      (make-data-descriptor/64 (crc-32 entry) (size entry) (uncompressed-size entry))))
+  (let ((uncompressed-size (uncompressed-size entry)))
+    (if (n-bit-and-note-zip64-p 32 uncompressed-size)
+        (make-data-descriptor (crc-32 entry) (size entry) uncompressed-size)
+        (make-data-descriptor/64 (crc-32 entry) (size entry) uncompressed-size))))
 
 (defun entry-to-cd (entry)
   (let ((file-name (babel:string-to-octets (file-name entry) :encoding :utf-8))
         (comment (encode-string (comment entry)))
-        (extra (make-array 0 :adjustable T :element-type '(unsigned-byte 8))))
-    (when (or (<= #xFFFFFFFF (size entry))
-              (<= #xFFFFFFFF (offset entry)))
+        (extra (make-array 0 :adjustable T :element-type '(unsigned-byte 8)))
+        (size (or (size entry) 0))
+        (uncompressed-size (or (uncompressed-size entry) 0))
+        (offset (offset entry)))
+    (when (not (n-bit-and-note-zip64-p 32 size offset))
       (add-extra-entry extra (make-zip64-extended-information
-                              28 (size entry) (uncompressed-size entry)
-                              (offset entry) 0)))
+                              28 size uncompressed-size
+                              offset 0)))
     (multiple-value-bind (date time) (encode-msdos-timestamp (last-modified entry))
       (make-central-directory-entry
        (entry-version entry)
@@ -133,10 +153,9 @@
        (entry-flags entry)
        (entry-compression-id entry)
        time date (or (crc-32 entry) 0)
-       (if (size entry) (cap (size entry) 32) 0)
-       (if (uncompressed-size entry) (cap (uncompressed-size entry) 32) 0)
+       (cap size 32) (cap uncompressed-size 32)
        (length file-name) (length extra) (length comment)
-       0 0 (or (encode-file-attribute (attributes entry)) 0) (cap (offset entry) 32)
+       0 0 (or (encode-file-attribute (attributes entry)) 0) (cap offset 32)
        file-name extra comment))))
 
 (defun encode-entry-payload (entry output password)
@@ -185,39 +204,53 @@
 
 (defun encode-file (zip-file output &key password
                                          (version-made *default-version-made*)
-                                         (version-needed *default-version-needed*))
-  (loop for i from 0
-        for entry across (entries zip-file)
-        do (setf (offset entry) (index output))
-           (backfill-from-content entry)
-           (write-structure* (entry-to-lf entry) output)
-           ;; TODO: Decryption header and all that guff
-           (encode-entry-payload entry output password)
-           (write-structure* (entry-to-dd entry) output)
-           ;; FIXME: If writing to a file-stream or vector, backtrack and
-           ;;        Fixup the LF entry with size/crc/flag
-        )
-  (let ((cd-start (index output)))
-    (loop for entry across (entries zip-file)
-          do (write-structure* (entry-to-cd entry) output))
-    (let ((cd-end (index output))
-          (comment (encode-string (comment zip-file))))
-      (write-structure* (make-end-of-central-directory/64
-                         44
-                         (encode-version version-made
-                         ;; FIXME: be smarter about noting the min version.
-                         (encode-version version-needed
-                         0 0 (length (entries zip-file)) (length (entries zip-file))
-                         (- cd-end cd-start) cd-start #())
-                        output)
-      (write-structure* (make-end-of-central-directory-locator/64
-                         0 cd-end 1)
-                        output)
-      (write-structure* (make-end-of-central-directory
-                         0 0
-                         (cap (length (entries zip-file)) 16)
-                         (cap (length (entries zip-file)) 16)
-                         (cap (- cd-end cd-start) 32)
-                         (cap cd-start 32)
-                         (length comment) comment)
-                        output))))
+                                         (version-needed *default-version-needed*)
+                                         (zip64 :when-needed))
+  (check-type zip64 (member NIL T :when-needed))
+  (let ((*zip64-needed* NIL))
+    (loop for i from 0
+          for entry across (entries zip-file)
+          do (setf (offset entry) (index output))
+             (backfill-from-content entry)
+             (write-structure* (entry-to-lf entry) output)
+             ;; TODO: Decryption header and all that guff
+             (encode-entry-payload entry output password)
+             (write-structure* (entry-to-dd entry) output)
+             ;; FIXME: If writing to a file-stream or vector, backtrack and
+             ;;        Fixup the LF entry with size/crc/flag
+          )
+    (let* ((cd-start (index output))
+           (entries (entries zip-file))
+           (entry-count (length entries)))
+      (loop for entry across entries
+            do (write-structure* (entry-to-cd entry) output))
+      (let* ((cd-end (index output))
+             (comment (encode-string (comment zip-file)))
+             ;; Create EOCD structure here and note overflows, so we
+             ;; know whether to write the ZIP64 structures prior to
+             ;; writing the EOCD structure.
+             (eocd (make-end-of-central-directory
+                    0 0
+                    (cap-and-note-zip64 entry-count 16)
+                    (cap-and-note-zip64 entry-count 16)
+                    (cap (- cd-end cd-start) 32)
+                    (cap cd-start 32)
+                    (length comment) comment)))
+        (cond ((or (eq zip64 T)
+                   (and (eq zip64 :when-needed) *zip64-needed*))
+               (write-structure* (make-end-of-central-directory/64
+                                  44
+                                  (encode-version version-made)
+                                  ;; FIXME: be smarter about noting the min version.
+                                  (encode-version version-needed)
+                                  0 0 entry-count entry-count
+                                  (- cd-end cd-start) cd-start #())
+                                 output)
+               (write-structure* (make-end-of-central-directory-locator/64
+                                  0 cd-end 1)
+                                 output))
+              (*zip64-needed*
+               (error "ZIP64 extension is required to encode the given archive contents but
+                       its use has been disallowed via ~S ~S."
+                      :zip64 zip64)))
+        (write-structure* eocd output)))))
