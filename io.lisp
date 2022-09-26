@@ -37,10 +37,8 @@
   (etypecase io
     (vector-input
      (vector-input-index io))
-    (file-stream
-     (file-position io))
-    (stream
-     0)))
+    (stream ; works for e.g. flexi-stream:in-memory-*-stream
+     (file-position io))))
 
 (defun start (io)
   (etypecase io
