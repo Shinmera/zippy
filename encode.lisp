@@ -85,7 +85,7 @@
 
 (defun add-extra-entry (extra entry)
   (let ((end (length extra)))
-    (setf extra (adjust-array extra (+ end (size entry))))
+    (setf extra (adjust-array extra (+ end 4 (zip64-extended-information-size entry))))
     (encode-structure entry extra end)
     extra))
 
