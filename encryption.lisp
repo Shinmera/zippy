@@ -64,6 +64,7 @@
       (setf (vector-decryption-state-consumed state) (- read start)))))
 
 (defmethod make-encryption-state ((format (eql NIL)) password &key buffer)
+  (declare (ignore buffer))
   NIL)
 
 (defmethod call-with-encrypted-buffer (function vector start end (state (eql NIL)))
