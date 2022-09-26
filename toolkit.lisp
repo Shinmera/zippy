@@ -49,6 +49,10 @@
           do (setf (gethash i table) e))
     table))
 
+(defun n-bit-p (bits &rest integers)
+  (let ((max (1- (ash 1 bits))))
+    (every (lambda (integer) (< integer max)) integers)))
+
 (defun cap (value bits)
   (let ((max (1- (ash 1 bits))))
     (if (< max value)
