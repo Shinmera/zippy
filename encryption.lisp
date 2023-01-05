@@ -28,6 +28,7 @@
 (defstruct (stream-decryption-state
             (:constructor make-stream-decryption-state (buffer)))
   (buffer NIL :type (simple-array (unsigned-byte 8) (*)))
+  (index 0 :type (unsigned-byte 32))
   (start 0 :type (unsigned-byte 32))
   (end 0 :type (unsigned-byte 32)))
 
@@ -36,7 +37,7 @@
 
 (defmethod call-with-decrypted-buffer (function (input stream) length (state stream-decryption-state))
   (let ((buffer (stream-decryption-state-buffer state))
-        (total-consumed 0))
+        (index (stream-decryption-state-index state)))
     (flet ((output (start end)
              (let ((consumed (funcall function buffer start end)))
                (setf (stream-decryption-state-start state) consumed)
@@ -44,17 +45,20 @@
                (when (< consumed end)
                  (return-from call-with-decrypted-buffer consumed))
                consumed)))
-      (output (stream-decryption-state-start state)
-              (stream-decryption-state-end state))
-      (loop while (< total-consumed length)
+      (when (< (stream-decryption-state-start state)
+               (stream-decryption-state-end state))
+        (output (stream-decryption-state-start state)
+                (stream-decryption-state-end state)))
+      (loop while (< index length)
             for read = (read-sequence buffer input :end (min (length buffer) length))
             for consumed = (output 0 read)
             do (cond ((= 0 consumed)
                       (setf (stream-decryption-state-end state) 0)
                       (return))
                      (T
-                      (incf total-consumed consumed))))
-      total-consumed)))
+                      (incf index consumed))))
+      (prog1 (- index (stream-decryption-state-index state))
+        (setf (stream-decryption-state-index state) index)))))
 
 (defmethod call-with-decrypted-buffer (function (input vector-input) length state)
   (let* ((start (vector-input-index input))
