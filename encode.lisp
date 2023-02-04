@@ -216,11 +216,19 @@
   (let ((*zip64-needed* NIL))
     (loop for i from 0
           for entry across (entries zip-file)
-          do (setf (offset entry) (index output))
+          for orig-offset = (offset entry)
+          for offset = (index output)
+          do (setf (offset entry) offset)
              (backfill-from-content entry)
              (write-structure* (entry-to-lf entry) output)
              ;; TODO: Decryption header and all that guff
-             (encode-entry-payload entry output password)
+             ;; KLUDGE: We temporarily reset the offset of the entry to
+             ;;         ensure we can read it from the source archive should
+             ;;         the entry be copyable from there.
+             (progn
+               (setf (offset entry) orig-offset)
+               (encode-entry-payload entry output password)
+               (setf (offset entry) offset))
              (write-structure* (entry-to-dd entry) output)
              ;; FIXME: If writing to a file-stream or vector, backtrack and
              ;;        Fixup the LF entry with size/crc/flag
