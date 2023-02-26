@@ -148,5 +148,8 @@
 
 (defun compress-zip (file target &key (start 0) end (if-exists :error) strip-root password)
   (let ((file (ensure-zip-file file :strip-root strip-root)))
+    (when password
+      (loop for entry across (entries file)
+            do (setf (encryption-method entry) :pkware)))
     (with-io (io target :direction :output :if-exists if-exists :start start :end end)
       (encode-file file io :password password))))
