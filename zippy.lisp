@@ -34,7 +34,7 @@
           for disk = (aref (disks file) i)
           do (when (streamp disk)
                (unless (open-stream-p disk)
-                 (error "Can't move closed stream in-memory."))
+                 (error 'stream-closed))
                (file-position disk 0)
                (let ((buffer (make-array (file-length disk) :element-type '(unsigned-byte 8))))
                  (read-sequence buffer disk)

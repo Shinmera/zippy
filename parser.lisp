@@ -11,27 +11,23 @@
 (defun decode-structure (vector index)
   (let* ((signature (nibbles:ub32ref/le vector index))
          (parser (or (gethash signature *structures*)
-                     (error "Don't know how to process block with signature~%  ~x"
-                            signature))))
+                     (error 'unknown-block-signature :signature signature))))
     (funcall (first parser) vector (+ index 4))))
 
 (defun read-structure (stream)
   (let* ((signature (nibbles:read-ub32/le stream))
          (parser (or (gethash signature *structures*)
-                     (error "Don't know how to process block with signature~%  ~x"
-                            signature))))
+                     (error 'unknown-block-signature :signature signature))))
     (funcall (second parser) stream)))
 
 (defun encode-structure (structure vector index)
   (let ((parser (or (gethash (type-of structure) *structures*)
-                    (error "Don't know how to serialise a structure of type~%  ~a"
-                           (type-of structure)))))
+                    (error 'unknown-structure-type :object structure))))
     (funcall (third parser) structure vector index)))
 
 (defun write-structure (structure stream)
   (let ((parser (or (gethash (type-of structure) *structures*)
-                    (error "Don't know how to serialise a structure of type~%  ~a"
-                           (type-of structure)))))
+                    (error 'unknown-structure-type :object structure))))
     (funcall (fourth parser) structure stream)))
 
 (defun integer-binary-type (integer)
@@ -39,7 +35,7 @@
         ((<= integer #xFFFF) 'ub16)
         ((<= integer #xFFFFFFFF) 'ub32)
         ((<= integer #xFFFFFFFFFFFFFFFF) 'ub64)
-        (T (error "Integer too large."))))
+        (T (error 'integer-too-large))))
 
 (defun binary-type-size (type)
   (ecase type
@@ -96,7 +92,7 @@
                 (setf ,name (,(binary-type-decoder btype) ,vector ,index))
                 (incf ,index ,(binary-type-size btype))
                 (unless (= ,type ,name)
-                  (error "Record does not match signature.")))))
+                  (error 'mismatched-type-signature :signature ,name)))))
           (count
            `(progn
               (setf ,name (make-array ,count :element-type ',(binary-type-type type)))
@@ -117,7 +113,7 @@
              `(progn
                 (setf ,name (,(binary-type-reader btype) ,stream))
                 (unless (= ,type ,name)
-                  (error "Record does not match signature.")))))
+                  (error 'mismatched-type-signature :signature ,name)))))
           (count
            `(progn
               (setf ,name (make-array ,count :element-type ',(binary-type-type type)))

@@ -31,11 +31,11 @@
 (defun file-attribute-name (id)
   (if (<= 0 id (1- (length *file-attribute-compatibility-map*)))
       (aref *file-attribute-compatibility-map* id)
-      (error "Unknown file attribute ~a" id)))
+      (error 'unknown-enum-value :value id)))
 
 (defun file-attribute-id (name)
   (or (position name *file-attribute-compatibility-map*)
-      (error "Unknown file attribute ~a" name)))
+      (error 'unknown-enum-value :value name)))
 
 (defparameter *compression-method-map*
   (alist-vector '((0 . :store)
@@ -67,11 +67,11 @@
 (defun compression-method-name (id)
   (if (<= 0 id (1- (length *compression-method-map*)))
       (aref *compression-method-map* id)
-      (error "Unknown compression method ~a" id)))
+      (error 'unknown-enum-value :value id)))
 
 (defun compression-method-id (name)
   (or (position name *compression-method-map*)
-      (error "Unknown compression method ~a" name)))
+      (error 'unknown-enum-value :value name)))
 
 (defparameter *encryption-method-map*
   (alist-table '((#x6601 . :des)
@@ -89,10 +89,10 @@
 
 (defun encryption-method-name (id)
   (or (gethash id *encryption-method-map*)
-      (error "Unknown encryption method ~d" id)))
+      (error 'unknown-enum-value :value id)))
 
 (defun encryption-method-id (name)
   (loop for id being the hash-keys of *encryption-method-map*
         for val being the hash-values of *encryption-method-map*
         do (when (eql name val) (return id))
-        finally (error "Unknown encryption method ~d" name)))
+        finally (error 'unsupported-encryption-method :encryption-method name)))

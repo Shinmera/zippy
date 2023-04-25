@@ -15,7 +15,7 @@
 
 (defmethod make-decryption-state (format input password &rest args)
   (declare (ignore args))
-  (error "Unsupported encryption method: ~a" format))
+  (error 'unsupported-encryption-method :encryption-method format))
 
 (defstruct (vector-decryption-state
             (:constructor make-vector-decryption-state ()))

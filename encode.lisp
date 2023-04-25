@@ -256,9 +256,8 @@
         (cond ((not version-needed)
                (setf version-needed min-version))
               ((version< version-needed min-version)
-               (error "~@<The specified version needed for extracting the archive is ~S which ~
-                       is less than the actually needed version which is ~S.~@:>"
-                      version-needed min-version)))
+               (error 'required-version-mismatched
+                      :specified-version version-needed :required-version min-version)))
         (cond (use-zip64-p
                (write-structure* (make-end-of-central-directory/64
                                   44
@@ -271,7 +270,5 @@
                                   0 cd-end 1)
                                  output))
               (*zip64-needed*
-               (error "ZIP64 extension is required to encode the given archive contents but
-                       its use has been disallowed via ~S ~S."
-                      :zip64 zip64)))
+               (error 'zip64-required :parameter zip64)))
         (write-structure* eocd output)))))

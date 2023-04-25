@@ -38,7 +38,7 @@
   (etypecase password
     (string (babel:string-to-octets password :encoding :utf-8))
     ((vector (unsigned-byte 8)) password)
-    (null (restart-case (error "Password is required")
+    (null (restart-case (error 'password-required)
             (use-value (password)
               (ensure-password password))))))
 

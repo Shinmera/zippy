@@ -15,7 +15,7 @@
 
 (defmethod make-decompression-state (format &key buffer)
   (declare (ignore buffer))
-  (error "Unsupported compression method: ~a" format))
+  (error 'unsupported-compression-method :compression-method format))
 
 (defmethod make-decompression-state ((format (eql NIL)) &key buffer)
   (declare (ignore buffer))

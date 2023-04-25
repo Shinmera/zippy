@@ -15,6 +15,36 @@
    #:make-compression-state
    #:call-with-compressed-buffer
    #:call-with-completed-compressed-buffer)
+  ;; conditions.lisp
+  (:export
+   #:zippy-condition
+   #:decoding-error
+   #:encoding-error
+   #:unknown-block-signature
+   #:signature
+   #:unknown-structure-type
+   #:object
+   #:mismatched-type-signature
+   #:signature
+   #:zip64-required
+   #:parameter
+   #:out-of-bounds-seek
+   #:target
+   #:stream-closed
+   #:malformed-file
+   #:message
+   #:required-version-mismatched
+   #:specified-version
+   #:required-version
+   #:integer-too-large
+   #:object
+   #:unsupported-compression-method
+   #:compression-method
+   #:unsupported-encryption-method
+   #:encryption-method
+   #:unknown-enum-value
+   #:value
+   #:password-required)
   ;; decode.lisp
   (:export
    #:archive-file-required

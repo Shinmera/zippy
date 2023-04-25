@@ -22,7 +22,7 @@
     (vector-input
      (if (<= (vector-input-start io) target (1- (vector-input-end io)))
          (setf (vector-input-index io) target)
-         (error "Cannot seek outside allowed vector range.")))
+         (error 'out-of-bounds-seek :target target)))
     (stream
      (file-position io target))))
 
@@ -72,7 +72,7 @@
   (etypecase io
     (vector-input
      (when (<= (vector-input-end io) (+ (vector-input-index io) (- end start)))
-       (error "Output too long for target vector."))
+       (error 'out-of-bounds-seek :target (+ (vector-input-index io) (- end start))))
      (loop with vector = (vector-input-vector io)
            for i from start below end
            for j from (vector-input-index io)

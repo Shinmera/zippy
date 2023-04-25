@@ -115,7 +115,7 @@
           ;;       read and then speculatively back up more bytes.
           do (if (<= (start input) (- (index input) 5))
                  (seek input (- (index input) 5))
-                 (error "This does not appear to be a Zip file:~%No end of central directory marker could be found.")))
+                 (error 'malformed-file :message "No end of central directory marker could be found.")))
     ;; We should now be at the beginning (after the signature) of the end-of-central-directory.
     (let* ((eocd (parse-structure end-of-central-directory input))
            (cd-offset (end-of-central-directory-central-directory-start eocd))
@@ -148,9 +148,7 @@
 Zip64 End of Central Directory Record was not at indicated position.
 Will attempt to continue with 32 bit standard central directory."))))
       (cond ((and (null entries) (= #xFFFFFFFF (end-of-central-directory-central-directory-start eocd)))
-             (error "File appears corrupted:
-
-No Zip64 End of Central Directory record found, but End of Central
+             (error 'malformed-file :message "No Zip64 End of Central Directory record found, but End of Central
 Directory contains a start marker that indicates there should be
 one."))
             (T
