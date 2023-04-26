@@ -30,6 +30,7 @@
   :depends-on (:documentation-utils
                :file-attributes
                :pathname-utils
+               :filesystem-utils
                :alexandria
                :nibbles
                :babel

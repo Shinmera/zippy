@@ -37,10 +37,10 @@
                             :unix)))))
     (format T "Compressing...~%")
     (zippy:compress-zip archive output :if-exists :supersede)
-    (format T "Done: ~a~%" (uiop:native-namestring output))))
+    (format T "Done: ~a~%" (pathname-utils:native-namestring output))))
 
 (defun parse-path (path)
-  (probe-file (uiop:parse-native-namestring path)))
+  (probe-file (pathname-utils:parse-native-namestring path)))
 
 (push :deploy-console *features*)
 
@@ -52,7 +52,7 @@
                (read-line))))
       (cond ((rest args)
              (compress (mapcar #'parse-path (rest args))
-                       (uiop:parse-native-namestring (first args)))
+                       (pathname-utils:parse-native-namestring (first args)))
              (exit))
             (args
              (compress (parse-path (first args))

@@ -130,6 +130,7 @@
                       ((or (pathname-name file) (pathname-type file))
                        (vector-push-extend (make-instance 'zip-entry :content file) entries))
                       (T
+                       (setf file (org.shirakumo.filesystem-utils:resolve-symbolic-links file))
                        (loop with base = (truename (if strip-root file (pathname-utils:parent file)))
                              for path in (directory (merge-pathnames (merge-pathnames pathname-utils:*wild-file* pathname-utils:*wild-inferiors*)
                                                                      file))
