@@ -1,14 +1,8 @@
-#|
- This file is a part of zippy
- (c) 2020 Shirakumo http://tymoon.eu (shinmera@tymoon.eu)
- Author: Nicolas Hafner <shinmera@tymoon.eu>
-|#
-
 (asdf:defsystem zippy
   :version "1.1.0"
   :license "zlib"
-  :author "Nicolas Hafner <shinmera@tymoon.eu>"
-  :maintainer "Nicolas Hafner <shinmera@tymoon.eu>"
+  :author "Yukari Hafner <shinmera@tymoon.eu>"
+  :maintainer "Yukari Hafner <shinmera@tymoon.eu>"
   :description "A fast zip archive library"
   :homepage "https://shinmera.github.io/zippy"
   :bug-tracker "https://github.com/Shinmera/zippy/issues"
