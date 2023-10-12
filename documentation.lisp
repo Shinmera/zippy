@@ -185,6 +185,20 @@ See ENTRY-TO-STREAM
 See ENTRY-TO-VECTOR
 See ARCHIVE-FILE-REQUIRED"))
 
+;; toolkit.lisp
+(docs:define-docs
+  (variable *default-buffer-size*
+    "Default buffer size when working on compressed data.
+
+For example this can be bound around calls to DECODE-ENTRY to give a
+more accurate size for the temporary buffer being allocated to decode
+a particular file.
+
+See DECODE-ENTRY
+See ENCODE-FILE
+See MAKE-DECRYPTION-STATE
+See MAKE-DECOMPRESSION-STATE"))
+
 ;; encode.lisp
 (docs:define-docs
   (variable *default-version-made*

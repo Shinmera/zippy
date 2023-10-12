@@ -121,7 +121,8 @@
    #:encryption-method-name
    #:encryption-method-id)
   ;; toolkit.lisp
-  (:export)
+  (:export
+   #:*default-buffer-size*)
   ;; zippy.lisp
   (:export
    #:zip-file

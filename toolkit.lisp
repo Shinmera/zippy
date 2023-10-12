@@ -17,6 +17,8 @@
   #+darwin :darwin
   #+(and unix (not darwin)) :unix)
 
+(defvar *default-buffer-size* 4096)
+
 (defun default-attributes-for (system)
   (case system
     ((:darwin :unix) #o644)
@@ -26,7 +28,7 @@
   (etypecase buffer
     (vector buffer)
     (integer (make-array buffer :element-type '(unsigned-byte 8)))
-    (null (make-array 4096 :element-type '(unsigned-byte 8)))))
+    (null (make-array *default-buffer-size* :element-type '(unsigned-byte 8)))))
 
 (defun ensure-password (password)
   (etypecase password
