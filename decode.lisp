@@ -15,7 +15,7 @@
                (when dec
                  (push (funcall (first dec) vector index) fields))
                (if (< index (length vector))
-                   (incf index (nibbles:ub16ref/le vector index))
+                   (incf index (+ 2 (nibbles:ub16ref/le vector index)))
                    (return))))
     (nreverse fields)))
 
