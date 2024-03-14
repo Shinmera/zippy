@@ -825,7 +825,7 @@ See CL:OPEN
 See ZIP-ENTRY")
 
   (function entry-to-stream
-    "Decodes the contents of the entry to the given octet input-stream.
+    "Decodes the contents of the entry to the given octet output-stream.
 
 See DECODE-ENTRY
 See ZIP-ENTRY")
