@@ -46,17 +46,17 @@
 (defmethod call-with-decrypted-buffer (function (input stream) length (state pkware-decrypt-state))
   (loop with buffer = (pkware-decrypt-state-buffer state)
         while (< 0 length)
-        for read = (read-sequence buffer input :end length)
-        do (loop for i from 0 below read
-                 for byte = (aref buffer i)
-                 for decrypted = (logxor byte (pkware-decrypt-byte state))
-                 do (update-pkware-state state decrypted)
-                    (setf (aref buffer i) (ldb (byte 8 0) decrypted)))
-           (decf length read)
-           ;; FIXME: does not work correctly.
-           (let ((consumed (funcall function buffer 0 read)))
-             (when (< consumed read)
-               (return read)))))
+        do (let ((read (read-sequence buffer input :end length)))
+             (loop for i from 0 below read
+                   for byte = (aref buffer i)
+                   for decrypted = (logxor byte (pkware-decrypt-byte state))
+                   do (update-pkware-state state decrypted)
+                      (setf (aref buffer i) (ldb (byte 8 0) decrypted)))
+             (decf length read)
+             ;; FIXME: does not work correctly.
+             (let ((consumed (funcall function buffer 0 read)))
+               (when (< consumed read)
+                 (return read))))))
 
 (defmethod call-with-decrypted-buffer (function (input vector-input) length (state pkware-decrypt-state))
   (loop with inbuffer = (vector-input-vector input)
