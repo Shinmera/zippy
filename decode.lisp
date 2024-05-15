@@ -214,9 +214,9 @@ one."))
       (stream
        (loop with buffer = (ensure-buffer NIL)
              while (< 0 length)
-             for read = (read-sequence buffer input :end (min (length buffer) length))
-             do (funcall function buffer 0 read)
-                (decf length read)))
+             do (let ((read (read-sequence buffer input :end (min (length buffer) length))))
+                  (funcall function buffer 0 read)
+                  (decf length read))))
       (vector-input
        (let ((start (vector-input-index input)))
          (funcall function (vector-input-vector input) start (+ start length))))
