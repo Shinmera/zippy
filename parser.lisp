@@ -217,10 +217,10 @@
         (s (ldb (byte 5 0) time)))
     (flet ((clamp (l x h)
              (min h (max l x))))
-      (encode-universal-time (clamp 0 (1+ (* 2 s)) 59) (clamp 0 (1- m) 59) (clamp 0 (1- h) 23) (clamp 1 dd 31) (clamp 1 mm 12) (+ 1980 yy) NIL))))
+      (encode-universal-time (clamp 0 (1+ (* 2 s)) 59) (clamp 0 (1- m) 59) (clamp 0 (1- h) 23) (clamp 1 dd 31) (clamp 1 mm 12) (+ 1980 yy) 0))))
 
 (defun encode-msdos-timestamp (timestamp)
-  (multiple-value-bind (s m h dd mm yy) (decode-universal-time timestamp NIL)
+  (multiple-value-bind (s m h dd mm yy) (decode-universal-time timestamp 0)
     (let ((date 0)
           (time 0))
       (setf (ldb (byte 7 9) date) (- yy 1980))
