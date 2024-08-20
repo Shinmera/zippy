@@ -15,7 +15,7 @@
 (defvar *compatibility*
   #+windows :ntfs
   #+darwin :darwin
-  #+(and unix (not darwin)) :unix)
+  #-(or windows darwin) :unix)
 
 (defvar *default-buffer-size* 4096)
 
