@@ -9,6 +9,7 @@
   :source-control (:git "https://github.com/Shinmera/zippy.git")
   :serial T
   :components ((:file "package")
+               (:file "conditions")
                (:file "toolkit")
                (:file "parser")
                (:file "io")
