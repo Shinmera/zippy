@@ -40,7 +40,8 @@
                                                :normal)
                                           T)
                                         *compatibility*
-                                        (file-attributes:attributes content))))
+                                        (handler-case (file-attributes:attributes content)
+                                          (error () (default-attributes-for *compatibility*))))))
        (unless (pathname-utils:directory-p content)
          (typecase content
            (file-stream (setf (uncompressed-size entry) (file-length content)))
