@@ -4,9 +4,9 @@
   :author "Yukari Hafner <shinmera@tymoon.eu>"
   :maintainer "Yukari Hafner <shinmera@tymoon.eu>"
   :description "A fast zip archive library"
-  :homepage "https://shinmera.github.io/zippy"
-  :bug-tracker "https://github.com/Shinmera/zippy/issues"
-  :source-control (:git "https://github.com/Shinmera/zippy.git")
+  :homepage "https://shinmera.com/docs/zippy"
+  :bug-tracker "https://shinmera.com/project/zippy/issues"
+  :source-control (:git "https://shinmera.com/project/zippy.git")
   :serial T
   :components ((:file "package")
                (:file "conditions")
